@@ -50,13 +50,9 @@ class resnet101(Model):
 
     def _set_summaries(self):
         tf.summary.scalar("Total_Loss", self.cost)
-#        tf.summary.scalar("Reconstruction_Loss", self.recon)
-#        tf.summary.scalar("VAE_Loss", self.vae)
         tf.summary.scalar("Weight_Decay_Loss", self.weight)
-#        tf.summary.histogram("Mean", self.mean)
-#        tf.summary.histogram("Stddev", self.stddev)
         tf.summary.image("x", self.x)
-#        tf.summary.image("x_hat", self.x_hat)
+
         
     def _conv_layers(self,x):
         conv_layers = Layers(x)
