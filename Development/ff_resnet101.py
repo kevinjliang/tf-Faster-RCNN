@@ -4,11 +4,12 @@ Created on Fri Dec 30 11:48:43 2016
 
 @author: Kevin Liang
 
-ResNet-101 convolutional model: https://arxiv.org/pdf/1512.03385v1.pdf
+Feed-forward ResNet-101 convolutional model: 
+https://arxiv.org/pdf/1512.03385v1.pdf
 """
 
 import sys
-sys.path.append('../')
+sys.path.append('../../')
 
 from TensorBase.tensorbase.base import Model
 from TensorBase.tensorbase.base import Layers
@@ -52,7 +53,6 @@ class resnet101(Model):
         tf.summary.scalar("Total_Loss", self.cost)
         tf.summary.scalar("Weight_Decay_Loss", self.weight)
         tf.summary.image("x", self.x)
-
         
     def _conv_layers(self,x):
         conv_layers = Layers(x)

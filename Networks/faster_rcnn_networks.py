@@ -16,14 +16,13 @@ from TensorBase.tensorbase.base import Layers
 
 import tensorflow as tf
 
-anchor_scales = [1,2,3]
-num_anchors = len(anchor_scales)*3
-
-def rpn(featureMaps):
+def rpn(featureMaps,flags):
     '''
     Region Proposal Network (RPN): Takes convolutional feature maps (TensorBase 
     Layers object) from the last layer and proposes bounding boxes for objects.
     '''
+    num_anchors = len(flags['anchor_scales'])*3    
+    
     rpn_layers = Layers(featureMaps)
     
     with tf.variable_scope('rpn'):
@@ -43,17 +42,19 @@ def rpn(featureMaps):
         
         return bbox_reg_layers, bbox_cls_layers
         
-def roi_proposal():
+def roi_proposal(bbox,gt_bbox):
     '''
     
     '''
     
-    return
+    return 
+    # return rois
     
     
-def rcnn():
+def rcnn(featureMaps,rois):
     '''
-    
+    Crop and resize areas from the feature-extracting CNN's feature maps 
+    according to the ROIs generated from the ROI proposal layer
     '''
     
     return
