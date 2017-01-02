@@ -32,7 +32,7 @@ from Lib.fast_rcnn_config import cfg
 from Lib.generate_anchors import generate_anchors
 
 
-def anchor_target_layer(rpn_cls_score, gt_boxes, im_dims, data, _feat_stride = [16,], anchor_scales = [8, 16, 32]):
+def anchor_target_layer(rpn_cls_score, gt_boxes, im_dims, _feat_stride = [16,], anchor_scales = [8, 16, 32]):
     """
     Assign anchors to ground-truth targets. Produces anchor classification
     labels and bounding-box regression targets.
