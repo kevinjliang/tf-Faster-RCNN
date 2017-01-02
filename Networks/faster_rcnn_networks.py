@@ -21,7 +21,7 @@ def rpn(featureMaps,flags):
     Region Proposal Network (RPN): Takes convolutional feature maps (TensorBase 
     Layers object) from the last layer and proposes bounding boxes for objects.
     '''
-    num_anchors = len(flags['anchor_scales'])*3    
+    _num_anchors = len(flags['anchor_scales'])*3    
     
     rpn_layers = Layers(featureMaps)
     
@@ -32,13 +32,13 @@ def rpn(featureMaps,flags):
         
         # Bounding-Box regression layer (bounding box) + anchors
         bbox_reg_layers = Layers(features)
-        bbox_reg_layers.conv2d(filter_size=1,output_channels=num_anchors*2,activation_fn=None)
+        bbox_reg_layers.conv2d(filter_size=1,output_channels=_num_anchors*2,activation_fn=None)
         
         ###ANCHORS###
         
         # Box-classification layer (objectness)
         bbox_cls_layers = Layers(features)
-        bbox_cls_layers.conv2d(filter_size=1,output_channels=num_anchors*4,activation_fn=None)
+        bbox_cls_layers.conv2d(filter_size=1,output_channels=_num_anchors*4,activation_fn=None)
         
         return bbox_reg_layers, bbox_cls_layers
         
