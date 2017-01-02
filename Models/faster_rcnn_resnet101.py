@@ -48,7 +48,7 @@ class faster_rcnn_resnet101(Model):
     def _set_placeholders(self):
         self.x = tf.placeholder(tf.float32, [None, flags['image_dim'], flags['image_dim'], 1], name='x')
         self.y = tf.placeholder(tf.int32, shape=[1])
-        # TODO bounding boxes need to go here too
+        self.gt_boxes = tf.placeholder(tf.int32, shape=[4]) 
         
     def _set_summaries(self):
         tf.summary.scalar("Total_Loss", self.cost)
@@ -59,10 +59,10 @@ class faster_rcnn_resnet101(Model):
     def _network(self):
         # Convolutional Feature Extractor: ResNet101
         self.cnn = resnet101(self.x)
-        self.featureMaps = resnet101.get_output()
+        self.featureMaps = self.cnn.get_output()
         
         # Region Proposal Network (RPN)
-        self.bbox_reg, self.bbox_cls = rpn(self.featureMaps,flags)
+#        self.bbox_reg, self.bbox_cls = rpn(self.featureMaps,flags)
         
         # ROI proposal
         
