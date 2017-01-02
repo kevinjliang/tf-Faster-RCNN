@@ -10,9 +10,9 @@ Contains the Region Proposal Network (RPN), ROI proposal layer, and the RCNN.
 """
 
 import sys
-sys.path.append('../../')
+sys.path.append('../')
 
-from TensorBase.tensorbase.base import Layers
+from Lib.TensorBase.tensorbase.base import Layers
 
 import tensorflow as tf
 

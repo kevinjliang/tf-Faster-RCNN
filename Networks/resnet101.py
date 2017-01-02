@@ -7,9 +7,9 @@ Created on Fri Dec 30 16:09:04 2016
 The ResNet101 Architecture: Convolutional feature extractor
 """
 import sys
-sys.path.append('../../')
+sys.path.append('../')
 
-from TensorBase.tensorbase.base import Layers
+from Lib.TensorBase.tensorbase.base import Layers
 
 import tensorflow as tf
 

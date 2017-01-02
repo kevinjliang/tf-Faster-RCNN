@@ -9,11 +9,10 @@ Faster R-CNN model using ResNet as the convolutional feature extractor
 
 import sys
 sys.path.append('../')
-sys.path.append('../../')
 
-from TensorBase.tensorbase.base import Model
-from TensorBase.tensorbase.base import Layers
-from TensorBase.tensorbase.data import Mnist
+from Lib.TensorBase.tensorbase.base import Model
+from Lib.TensorBase.tensorbase.base import Layers
+from Lib.TensorBase.tensorbase.data import Mnist
 
 from Networks.resnet101 import resnet101
 from Networks.faster_rcnn_networks import rpn, roi_proposal, rcnn

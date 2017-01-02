@@ -9,11 +9,11 @@ https://arxiv.org/pdf/1512.03385v1.pdf
 """
 
 import sys
-sys.path.append('../../')
+sys.path.append('../')
 
-from TensorBase.tensorbase.base import Model
-from TensorBase.tensorbase.base import Layers
-from TensorBase.tensorbase.data import Mnist
+from Lib.TensorBase.tensorbase.base import Model
+from Lib.TensorBase.tensorbase.base import Layers
+from Lib.TensorBase.tensorbase.data import Mnist
 
 import tensorflow as tf
 import numpy as np
