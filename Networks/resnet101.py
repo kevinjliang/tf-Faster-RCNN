@@ -18,6 +18,7 @@ import tensorflow as tf
 class resnet101:
     def __init__(self, x):
         self.network = self._network(x)
+        self._feat_stride = 2**5        # Total downsampling factor of the network
         
     def _network(self, x):
         conv_layers = Layers(x)
@@ -51,4 +52,7 @@ class resnet101:
         
     def get_output(self):
         return self.network.get_output
+        
+    def get_feat_stride(self):
+        return self._feat_stride
         

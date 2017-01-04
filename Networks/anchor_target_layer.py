@@ -20,11 +20,11 @@ https://github.com/rbgirshick/py-faster-rcnn/blob/master/lib/rpn/anchor_target_l
 
 import sys
 sys.path.append('../')
-sys.path.append('../../')
 
 import pyximport; pyximport.install()
 import numpy as np
 import numpy.random as npr
+import tensorflow as tf
 
 from Lib.bbox_overlaps import bbox_overlaps
 from Lib.bbox_transform import bbox_transform
@@ -32,8 +32,25 @@ from Lib.fast_rcnn_config import cfg
 from Lib.generate_anchors import generate_anchors
 
 
-def anchor_target_layer(rpn_cls_score, gt_boxes, im_dims, _feat_stride = [16,], anchor_scales = [8, 16, 32]):
+def anchor_target_layer(rpn_cls_score, gt_boxes, im_dims, _feat_stride, anchor_scales):
+    '''
+    Make Python version of _anchor_target_layer_py below Tensorflow compatible
+    '''    
+    rpn_labels,rpn_bbox_targets,rpn_bbox_inside_weights,rpn_bbox_outside_weights = \
+        tf.py_func(_anchor_target_layer_py,[rpn_cls_score, gt_boxes, im_dims, _feat_stride, anchor_scales],[tf.float32,tf.float32,tf.float32,tf.float32])
+
+    rpn_labels = tf.convert_to_tensor(tf.cast(rpn_labels,tf.int32), name = 'rpn_labels')
+    rpn_bbox_targets = tf.convert_to_tensor(rpn_bbox_targets, name = 'rpn_bbox_targets')
+    rpn_bbox_inside_weights = tf.convert_to_tensor(rpn_bbox_inside_weights , name = 'rpn_bbox_inside_weights')
+    rpn_bbox_outside_weights = tf.convert_to_tensor(rpn_bbox_outside_weights , name = 'rpn_bbox_outside_weights')
+
+    return rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights
+
+
+def _anchor_target_layer_py(rpn_cls_score, gt_boxes, im_dims, _feat_stride = [16,], anchor_scales = [8, 16, 32]):
     """
+    Python version    
+    
     Assign anchors to ground-truth targets. Produces anchor classification
     labels and bounding-box regression targets.
     
