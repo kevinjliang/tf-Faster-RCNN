@@ -8,13 +8,15 @@ Faster R-CNN detection and classification networks.
 
 Contains the Region Proposal Network (RPN), ROI proposal layer, and the RCNN.
 
-TODO: -Split off these three networks into their own files
+TODO: -Split off these three networks into their own files OR add to Layers
+      -Move flags to config file
 """
 
 import sys
 sys.path.append('../')
 
 from Lib.TensorBase.tensorbase.base import Layers
+from Lib.roi_pool import roi_pool
 from Lib.rpn_softmax import rpn_softmax
 from Networks.anchor_target_layer import anchor_target_layer 
 from Networks.proposal_layer import proposal_layer
@@ -117,15 +119,29 @@ class roi_proposal:
         return self.bbox_outside_weights
         
     
-class rcnn:
+class fast_rcnn:
     '''
     Crop and resize areas from the feature-extracting CNN's feature maps 
     according to the ROIs generated from the ROI proposal layer
     '''
-    def __init__(self,featureMaps,rois):
+    def __init__(self,featureMaps,rois, im_dims, flags):
         self.featureMaps = featureMaps
         self.rois = rois
+        self.im_dims = im_dims
+        self.flags = flags
         self._network()
             
     def _network(self):
-        print("TODO")
+        # ROI pooling
+        pooledFeatures = roi_pool(self.featureMaps,self.rois,self.im_dims)
+        
+        # Fully Connect layers (with dropout)
+        with tf.variable_scope('cls'):
+            self.rcnn_cls_layers = Layers(pooledFeatures)
+            self.rcnn_cls_layers.flatten()
+            self.rcnn_cls_layers.fc(output_nodes=4096, keep_prob=0.5)
+            self.rcnn_cls_layers.fc(output_nodes=4096, keep_prob=0.5)
+            self.rcnn_cls_layers.fc(output_nodes=self.flags['num_classes'])
+    
+    def get_cls_score(self):
+        return self.rcnn_cls_layers.get_output()

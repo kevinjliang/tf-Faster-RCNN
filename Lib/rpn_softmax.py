@@ -9,19 +9,19 @@ import tensorflow as tf
 
 def rpn_softmax(rpn_cls_score):
     '''
-    Reshape the rpn_cls_score (1,W,H,2k) to take a softmax. Converts scores to 
+    Reshape the rpn_cls_score (n,W,H,2k) to take a softmax. Converts scores to 
     probabilities
     
-    ex. 9 anchors, 1 image minibatch, convolutional feature maps of dims WxH
+    ex. 9 anchors, n samples minibatch, convolutional feature maps of dims WxH
     
-    rpn_cls_score: (1,W,H,18)
-    <transpose>     (1,18,W,H)
-    <reshape>       (1,2,9W,H)
-    <transpose>     (1,9W,H,2)
-    <softmax>       (1,9W,H,2)
-    <transpose>     (1,2,9W,H)
-    <reshape>       (1,18,W,H)
-    <transpose>     (1,W,H,18)
+    rpn_cls_score:  (n,W,H,18)
+    <transpose>     (n,18,W,H)
+    <reshape>       (n,2,9W,H)
+    <transpose>     (n,9W,H,2)
+    <softmax>       (n,9W,H,2)
+    <transpose>     (n,2,9W,H)
+    <reshape>       (n,18,W,H)
+    <transpose>     (n,W,H,18)
     
     return rpn_cls_prob
     '''    
