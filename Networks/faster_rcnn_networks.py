@@ -9,23 +9,25 @@ Faster R-CNN detection and classification networks.
 Contains the Region Proposal Network (RPN), ROI proposal layer, and the RCNN.
 
 TODO: -Split off these three networks into their own files
-      -Move the TensorFlow-ifying code to the layer file
 """
 
 import sys
 sys.path.append('../')
 
 from Lib.TensorBase.tensorbase.base import Layers
-from Lib.anchor_target_layer import anchor_target_layer 
-from Lib.proposal_layer import proposal_layer
-
+from Lib.rpn_softmax import rpn_softmax
+from Networks.anchor_target_layer import anchor_target_layer 
+from Networks.proposal_layer import proposal_layer
+from Networks.proposal_target_layer import proposal_target_layer
 
 import tensorflow as tf
 
+
 class rpn:
     '''
-    Region Proposal Network (RPN): Takes convolutional feature maps (TensorBase 
-    Layers object) from the last layer and proposes bounding boxes for objects.
+    Region Proposal Network (RPN): From the convolutional feature maps 
+    (TensorBase Layers object) of the last layer, generate bounding boxes 
+    relative to anchor boxes and give an "objectness" score to each
     '''
     def __init__(self,featureMaps,gt_boxes,im_dims,flags):
         self.featureMaps = featureMaps
@@ -57,7 +59,7 @@ class rpn:
             self.rpn_bbox_pred_layers = Layers(features)
             self.rpn_bbox_pred_layers.conv2d(filter_size=1,output_channels=_num_anchors*4,activation_fn=None)
 
-    def get_rpn_bbox_cls(self):
+    def get_rpn_cls_score(self):
         return self.rpn_bbox_cls_layers.get_output()
         
     def get_rpn_bbox_pred(self):
@@ -67,7 +69,7 @@ class rpn:
         return self.rpn_labels
         
     def get_rpn_bbox_targets(self):
-        return self.bbox_targets
+        return self.rpn_bbox_targets
         
     def get_rpn_bbox_inside_weights(self):
         return self.rpn_bbox_inside_weights
@@ -78,19 +80,42 @@ class rpn:
         
 class roi_proposal:
     '''
-    
+    Propose highest scoring boxes to the rcnn classifier
     '''
-    def __init__(self,rpn_bbox_cls,gt_boxes,im_dims,flags):
-        self.rpn_bbox_cls = rpn_bbox_cls
+    def __init__(self,rpn_cls_score,rpn_bbox_pred,gt_boxes,im_dims,flags):
+        self.rpn_cls_score = rpn_cls_score
+        self.rpn_bbox_pred = rpn_bbox_pred
         self.gt_boxes = gt_boxes
         self.im_dims = im_dims
         self.flags = flags
         self._network()
         
     def _network(self):
+        # Convert scores to probabilities
+        self.rpn_cls_prob = rpn_softmax(self.rpn_cls_score)
         
+        # Determine best proposals
+        self.blobs = proposal_layer(rpn_bbox_cls_prob=self.rpn_cls_prob, rpn_bbox_pred=self.rpn_bbox_pred, im_dims=self.im_dims, cfg_key='TRAIN', _feat_stride=2**5, anchor_scales=self.flags['anchor_scales'])
     
+        # Calculate targets for proposals
+        self.rois, self.labels, self.bbox_targets, self.bbox_inside_weights, self.bbox_outside_weights = \
+            proposal_target_layer(rpn_rois=self.blobs, gt_boxes=self.gt_boxes,_num_classes=self.flags['num_classes'])
     
+    def get_rois(self):
+        return self.rois
+        
+    def get_labels(self):
+        return self.labels
+        
+    def get_bbox_targets(self):
+        return self.bbox_targets
+        
+    def get_bbox_inside_weights(self):
+        return self.bbox_inside_weights
+        
+    def get_bbox_outside_weights(self):
+        return self.bbox_outside_weights
+        
     
 class rcnn:
     '''
