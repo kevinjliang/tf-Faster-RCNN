@@ -132,16 +132,31 @@ class fast_rcnn:
         self._network()
             
     def _network(self):
-        # ROI pooling
-        pooledFeatures = roi_pool(self.featureMaps,self.rois,self.im_dims)
-        
-        # Fully Connect layers (with dropout)
-        with tf.variable_scope('cls'):
-            self.rcnn_cls_layers = Layers(pooledFeatures)
-            self.rcnn_cls_layers.flatten()
-            self.rcnn_cls_layers.fc(output_nodes=4096, keep_prob=0.5)
-            self.rcnn_cls_layers.fc(output_nodes=4096, keep_prob=0.5)
-            self.rcnn_cls_layers.fc(output_nodes=self.flags['num_classes'])
+        with tf.variable_scope('fast_rcnn'):
+            # ROI pooling
+            pooledFeatures = roi_pool(self.featureMaps,self.rois,self.im_dims)
+            
+            # Fully Connect layers (with dropout)
+            with tf.variable_scope('fc'):
+                self.rcnn_fc_layers = Layers(pooledFeatures)
+                self.rcnn_fc_layers.flatten()
+                self.rcnn_fc_layers.fc(output_nodes=4096, keep_prob=0.5)
+                self.rcnn_fc_layers.fc(output_nodes=4096, keep_prob=0.5)
+                
+                hidden = self.rcnn_fc_layers.get_output()
+                
+            # Classifier score
+            with tf.variable_scope('cls'):
+                self.rcnn_cls_layers = Layers(hidden)
+                self.rcnn_cls_layers.fc(output_nodes=self.flags['num_classes'],activation_fn=None)
     
+            # Bounding Box refinement
+            with tf.variable_scope('bbox'):
+                self.rcnn_bbox_layers = Layers(hidden)
+                self.rcnn_bbox_layers.fc(output_nodes=4*self.flags['num_classes'],activation_fn=None)
+            
     def get_cls_score(self):
         return self.rcnn_cls_layers.get_output()
+        
+    def get_bbox_refinement(self):
+        return self.rcnn_bbox_layers.get_output()
