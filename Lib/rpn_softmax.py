@@ -25,7 +25,6 @@ def rpn_softmax(rpn_cls_score):
     
     return rpn_cls_prob
     '''    
-    
     # input shape dimensions
     shape = tf.shape(rpn_cls_score)
     
@@ -43,3 +42,4 @@ def rpn_softmax(rpn_cls_score):
     rpn_cls_prob = tf.transpose(rpn_cls_prob,[0,2,3,1])
     
     return rpn_cls_prob
+        

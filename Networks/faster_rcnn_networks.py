@@ -53,14 +53,15 @@ class rpn:
             self.rpn_bbox_cls_layers.conv2d(filter_size=1,output_channels=_num_anchors*2,activation_fn=None)        
             
             # Anchor Target Layer (anchors and deltas)
-            self.rpn_cls_score = self.rpn_bbox_cls_layers.get_output()
+            rpn_cls_score = self.rpn_bbox_cls_layers.get_output()
             self.rpn_labels,self.rpn_bbox_targets,self.rpn_bbox_inside_weights,self.rpn_bbox_outside_weights = \
-                anchor_target_layer(rpn_cls_score=self.rpn_cls_score,gt_boxes=self.gt_boxes,im_dims=self.im_dims,anchor_scales=self.flags['anchor_scales'])       
+                anchor_target_layer(rpn_cls_score=rpn_cls_score,gt_boxes=self.gt_boxes,im_dims=self.im_dims,anchor_scales=self.flags['anchor_scales'])       
             
             # Bounding-Box regression layer (bounding box predictions)
             self.rpn_bbox_pred_layers = Layers(features)
             self.rpn_bbox_pred_layers.conv2d(filter_size=1,output_channels=_num_anchors*4,activation_fn=None)
 
+    # Get functions
     def get_rpn_cls_score(self):
         return self.rpn_bbox_cls_layers.get_output()
         
@@ -78,7 +79,10 @@ class rpn:
         
     def get_rpn_bbox_outside_weights(self):
         return self.rpn_bbox_outside_weights
-        
+    
+    # Loss functions
+    def rpn_cls_loss(self):
+        print('TODO')
         
 class roi_proposal:
     '''
@@ -124,7 +128,7 @@ class fast_rcnn:
     Crop and resize areas from the feature-extracting CNN's feature maps 
     according to the ROIs generated from the ROI proposal layer
     '''
-    def __init__(self,featureMaps,rois, im_dims, flags):
+    def __init__(self,featureMaps, rois, im_dims, flags):
         self.featureMaps = featureMaps
         self.rois = rois
         self.im_dims = im_dims
