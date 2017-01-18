@@ -18,7 +18,7 @@ from Networks.resnet101 import resnet101
 from Networks.faster_rcnn_networks import rpn, roi_proposal, fast_rcnn
 
 import tensorflow as tf
-import numpy as np
+#import numpy as np
 
 # Global Dictionary of Flags
 flags = {
@@ -47,16 +47,19 @@ class faster_rcnn_resnet101(Model):
         
     def _set_placeholders(self):
         self.x = tf.placeholder(tf.float32, [None, flags['image_dim'], flags['image_dim'], 1], name='x')
-        self.y = tf.placeholder(tf.int32, shape=[1])
-        self.gt_boxes = tf.placeholder(tf.int32, shape=[4]) 
+        self.gt_boxes = tf.placeholder(tf.int32, shape=[5])         # [x1,y1,x2,y2,label]
         self.im_dims = tf.placeholder(tf.in32, shape=[2])
         
     def _set_summaries(self):
         ''' Define summaries for TensorBoard '''
         tf.summary.scalar("Total_Loss", self.cost)
-        tf.summary.scalar("Weight_Decay_Loss", self.weight)
+        tf.summary.scalar("RPN_cls_Loss", self.rpn_cls_loss)
+        tf.summary.scalar("RPN_bbox_Loss", self.rpn_bbox_loss) 
+        tf.summary.scalar("Fast_RCNN_cls_Loss", self.fast_rcnn_cls_loss)
+        tf.summary.scalar("Fast_RCNN_bbox_Loss", self.fast_rcnn_bbox_loss)
+#        tf.summary.scalar("Weight_Decay_Loss", self.weight)
         tf.summary.image("x", self.x)
-        # TODO add individual losses from RPN, Fast RCNN
+
         
     def _network(self):
         ''' Define the network outputs '''
@@ -80,7 +83,14 @@ class faster_rcnn_resnet101(Model):
         
     def _optimizer(self):
         ''' Define losses and initialize optimizer '''
+        # Losses
+        self.rpn_cls_loss = self.rpn_net.get_rpn_cls_loss()
+        self.rpn_bbox_loss = self.rpn_net.get_rpn_bbox_loss()
+        self.fast_rcnn_cls_loss = self.fast_rcnn_net.get_fast_rcnn_cls_loss()
+        self.fast_rcnn_bbox_loss = self.fast_rcnn_net.get_fast_rcnn_bbox_loss()
         
+        self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss + self.fast_rcnn_bbox_loss)
         
+        self.train.optimizer = tf.train.AdamOptimizer().minimize(self.cost)
         
         

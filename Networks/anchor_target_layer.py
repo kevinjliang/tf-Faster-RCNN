@@ -187,13 +187,13 @@ def _anchor_target_layer_py(rpn_cls_score, gt_boxes, im_dims, _feat_stride = [16
     rpn_labels = labels
 
     # bbox_targets
-    rpn_bbox_targets = bbox_targets.reshape((1, height, width, A * 4)).transpose(0, 3, 1, 2)
+    rpn_bbox_targets = bbox_targets.reshape((1, height, width, A * 4))#.transpose(0, 3, 1, 2)
     
     # bbox_inside_weights
-    rpn_bbox_inside_weights = bbox_inside_weights.reshape((1, height, width, A * 4)).transpose(0, 3, 1, 2)
+    rpn_bbox_inside_weights = bbox_inside_weights.reshape((1, height, width, A * 4))#.transpose(0, 3, 1, 2)
 
     # bbox_outside_weights
-    rpn_bbox_outside_weights = bbox_outside_weights.reshape((1, height, width, A * 4)).transpose(0, 3, 1, 2)
+    rpn_bbox_outside_weights = bbox_outside_weights.reshape((1, height, width, A * 4))#.transpose(0, 3, 1, 2)
 
     return rpn_labels,rpn_bbox_targets,rpn_bbox_inside_weights,rpn_bbox_outside_weights  
     

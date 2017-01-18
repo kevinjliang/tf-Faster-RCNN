@@ -16,6 +16,7 @@ import sys
 sys.path.append('../')
 
 from Lib.TensorBase.tensorbase.base import Layers
+from Lib.loss_functions import rpn_cls_loss, rpn_bbox_loss, fast_rcnn_cls_loss, fast_rcnn_bbox_loss
 from Lib.roi_pool import roi_pool
 from Lib.rpn_softmax import rpn_softmax
 from Networks.anchor_target_layer import anchor_target_layer 
@@ -64,12 +65,12 @@ class rpn:
     # Get functions
     def get_rpn_cls_score(self):
         return self.rpn_bbox_cls_layers.get_output()
-        
-    def get_rpn_bbox_pred(self):
-        return self.rpn_bbox_pred_layers.get_output()
     
     def get_rpn_labels(self):
         return self.rpn_labels
+        
+    def get_rpn_bbox_pred(self):
+        return self.rpn_bbox_pred_layers.get_output()
         
     def get_rpn_bbox_targets(self):
         return self.rpn_bbox_targets
@@ -81,9 +82,19 @@ class rpn:
         return self.rpn_bbox_outside_weights
     
     # Loss functions
-    def rpn_cls_loss(self):
-        print('TODO')
+    def get_rpn_cls_loss(self):
+        rpn_cls_score = self.get_rpn_cls_score()
+        rpn_labels = self.get_rpn_labels()
+        return rpn_cls_loss(rpn_cls_score,rpn_labels)
+    
+    def get_rpn_bbox_loss(self):
+        rpn_bbox_pred = self.get_rpn_bbox_pred()
+        rpn_bbox_targets = self.get_rpn_bbox_targets()
+        rpn_inside_weights = self.get_rpn_inside_weights()
+        rpn_outside_weights = self.get_rpn_outside_weights()
+        return rpn_bbox_loss(rpn_bbox_pred, rpn_bbox_targets, rpn_inside_weights, rpn_outside_weights)
         
+
 class roi_proposal:
     '''
     Propose highest scoring boxes to the rcnn classifier
@@ -128,11 +139,12 @@ class fast_rcnn:
     Crop and resize areas from the feature-extracting CNN's feature maps 
     according to the ROIs generated from the ROI proposal layer
     '''
-    def __init__(self,featureMaps, rois, im_dims, flags):
+    def __init__(self,featureMaps, roi_proposal_net):
         self.featureMaps = featureMaps
-        self.rois = rois
-        self.im_dims = im_dims
-        self.flags = flags
+        self.roi_proposal_net = roi_proposal_net
+        self.rois = roi_proposal_net.get_rois()
+        self.im_dims = roi_proposal_net.im_dims
+        self.flags = roi_proposal_net.flags
         self._network()
             
     def _network(self):
@@ -158,9 +170,24 @@ class fast_rcnn:
             with tf.variable_scope('bbox'):
                 self.rcnn_bbox_layers = Layers(hidden)
                 self.rcnn_bbox_layers.fc(output_nodes=4*self.flags['num_classes'],activation_fn=None)
-            
+           
+    # Get functions
     def get_cls_score(self):
         return self.rcnn_cls_layers.get_output()
         
     def get_bbox_refinement(self):
         return self.rcnn_bbox_layers.get_output()
+        
+    # Loss functions
+    def get_fast_rcnn_cls_loss(self):
+        fast_rcnn_cls_score = self.get_cls_score()
+        labels = self.roi_proposal_net.get_labels()
+        return fast_rcnn_cls_loss(fast_rcnn_cls_score, labels)
+    
+    def get_fast_rcnn_bbox_loss(self):
+        fast_rcnn_bbox_pred = self.get_bbox_refinement()
+        bbox_targets = self.roi_proposal_net.get_bbox_targets()
+        roi_inside_weights = self.roi_proposal_net.get_bbox_inside_weights()
+        roi_outside_weights = self.roi_proposal_net.get_bbox_outside_weights()
+        return fast_rcnn_bbox_loss(fast_rcnn_bbox_pred, bbox_targets, roi_inside_weights, roi_outside_weights)
+        

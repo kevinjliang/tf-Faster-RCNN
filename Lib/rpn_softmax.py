@@ -24,6 +24,9 @@ def rpn_softmax(rpn_cls_score):
     <transpose>     (n,W,H,18)
     
     return rpn_cls_prob
+    
+    TODO: Can probably just take the softmax of a specific index and get rid of
+    two tranpsoses
     '''    
     # input shape dimensions
     shape = tf.shape(rpn_cls_score)
