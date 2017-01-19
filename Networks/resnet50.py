@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Dec 30 16:09:04 2016
+Created on Wed Jan 18 20:11:09 2017
 
 @author: Kevin Liang
 
-The ResNet101 Architecture: Convolutional feature extractor
+The ResNet50 Architecture: Convolutional feature extractor
 
 Built on TensorBase: https://github.com/kevinjliang/TensorBase
 """
@@ -15,7 +15,7 @@ from Lib.TensorBase.tensorbase.base import Layers
 
 import tensorflow as tf
 
-class resnet101:
+class resnet50:
     def __init__(self, x):
         self.network = self._network(x)
         self._feat_stride = 2**5        # Total downsampling factor of the network
@@ -25,11 +25,11 @@ class resnet101:
             
         # Convolutional layers
         with tf.variable_scope('resnet101'):
-            res_blocks = [1,3,4,23,3]
+            res_blocks = [1,3,4,6,3]
             output_channels = [64,256,512,1024,2048]
             
             with tf.variable_scope('scale0'):
-                conv_layers.conv2d(filter_size=7,output_channels=output_channels[0],stride=2,padding='SAME',b_value=None)
+                conv_layers.conv2d(filter_size=7, output_channels=output_channels[0], stride=2, padding='SAME', b_value=None)
                 conv_layers.maxpool(k=3,s=2)
             with tf.variable_scope('scale1'):
                 conv_layers.res_layer(filter_size=3, output_channels=output_channels[1], stride=2)
@@ -55,4 +55,3 @@ class resnet101:
         
     def get_feat_stride(self):
         return self._feat_stride
-        
