@@ -14,7 +14,7 @@ from Lib.TensorBase.tensorbase.base import Model
 #from Lib.TensorBase.tensorbase.base import Layers
 from Lib.TensorBase.tensorbase.data import Mnist
 
-from Networks.resnet101 import resnet101
+from Networks.resnet import resnet
 from Networks.faster_rcnn_networks import rpn, roi_proposal, fast_rcnn
 
 import tensorflow as tf
@@ -64,7 +64,7 @@ class faster_rcnn_resnet101(Model):
     def _network(self):
         ''' Define the network outputs '''
         # Convolutional Feature Extractor: ResNet101
-        self.cnn = resnet101(self.x)
+        self.cnn = resnet(101,self.x)
         featureMaps = self.cnn.get_output()
         
         # Region Proposal Network (RPN)

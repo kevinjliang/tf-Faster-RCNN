@@ -4,7 +4,9 @@ Created on Fri Dec 30 16:09:04 2016
 
 @author: Kevin Liang
 
-The ResNet101 Architecture: Convolutional feature extractor
+The ResNet Architecture: Convolutional feature extractor
+
+Support for several different numbers of layers (50,101,152).
 
 Built on TensorBase: https://github.com/kevinjliang/TensorBase
 """
@@ -15,17 +17,29 @@ from Lib.TensorBase.tensorbase.base import Layers
 
 import tensorflow as tf
 
-class resnet101:
-    def __init__(self, x):
+
+class resnet:
+    # Number of convolutional layers at each scale
+    architectures = {
+        50: [1,3,4,6,3],
+        101: [1,3,4,23,3],
+        152: [1,3,8,36,3]
+    }
+    
+    # Total downsampling factor of the network
+    _feat_stride = 2**5        
+    
+    def __init__(self, depth, x):
+        self.depth = depth
         self.network = self._network(x)
-        self._feat_stride = 2**5        # Total downsampling factor of the network
         
     def _network(self, x):
         conv_layers = Layers(x)
             
         # Convolutional layers
-        with tf.variable_scope('resnet101'):
-            res_blocks = [1,3,4,23,3]
+        scope = 'resnet' + str(self.depth)
+        with tf.variable_scope(scope):
+            res_blocks = self.architectures[self.depth]
             output_channels = [64,256,512,1024,2048]
             
             with tf.variable_scope('scale0'):
