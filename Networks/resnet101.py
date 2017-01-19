@@ -29,24 +29,24 @@ class resnet101:
             output_channels = [64,256,512,1024,2048]
             
             with tf.variable_scope('scale0'):
-                conv_layers.conv2d(filter_size=7,output_channels=output_channels[0],stride=2,padding='SAME',b_value=None)
+                conv_layers.conv2d(filter_size=7, output_channels=output_channels[0], stride=2, padding='SAME', b_value=None)
                 conv_layers.maxpool(k=3,s=2)
             with tf.variable_scope('scale1'):
                 conv_layers.res_layer(filter_size=3, output_channels=output_channels[1], stride=2)
                 for block in range(res_blocks[1]-1):
-                    conv_layers.conv_layers.res_layer(filter_size=3, output_channels=output_channels[1], stride=1)
+                    conv_layers.res_layer(filter_size=3, output_channels=output_channels[1], stride=1)
             with tf.variable_scope('scale2'):
                 conv_layers.res_layer(filter_size=3, output_channels=output_channels[2], stride=2)
                 for block in range(res_blocks[2]-1):
-                    conv_layers.conv_layers.res_layer(filter_size=3, output_channels=output_channels[2], stride=1)
+                    conv_layers.res_layer(filter_size=3, output_channels=output_channels[2], stride=1)
             with tf.variable_scope('scale3'):
                 conv_layers.res_layer(filter_size=3, output_channels=output_channels[3], stride=2)
                 for block in range(res_blocks[3]-1):
-                    conv_layers.conv_layers.res_layer(filter_size=3, output_channels=output_channels[3], stride=1)
+                    conv_layers.res_layer(filter_size=3, output_channels=output_channels[3], stride=1)
             with tf.variable_scope('scale4'):
                 conv_layers.res_layer(filter_size=3, output_channels=output_channels[4], stride=2)
                 for block in range(res_blocks[4]-1):
-                    conv_layers.conv_layers.res_layer(filter_size=3, output_channels=output_channels[4], stride=1)
+                    conv_layers.res_layer(filter_size=3, output_channels=output_channels[4], stride=1)
         
         return conv_layers
         
