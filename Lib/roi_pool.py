@@ -12,8 +12,6 @@ maxpooled to (7x7)
 """
 
 import tensorflow as tf
-from tensorflow.image import crop_and_resize
-from tensorflow.nn import max_pool
 
 def roi_pool(featureMaps,rois,im_dims):    
     '''
@@ -38,9 +36,9 @@ def roi_pool(featureMaps,rois,im_dims):
     crop_size = tf.constant([14,14])
     
     # ROI pool
-    pooledFeatures = crop_and_resize(image=featureMaps, boxes=boxes, box_ind=box_ind, crop_size=crop_size)
+    pooledFeatures = tf.image.crop_and_resize(image=featureMaps, boxes=boxes, box_ind=box_ind, crop_size=crop_size)
     
     # Max pool to (7x7)
-    pooledFeatures = max_pool(pooledFeatures, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+    pooledFeatures = tf.nn.max_pool(pooledFeatures, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     return pooledFeatures

@@ -18,7 +18,7 @@ from Networks.resnet import resnet
 from Networks.faster_rcnn_networks import rpn, roi_proposal, fast_rcnn
 
 import tensorflow as tf
-#import numpy as np
+import numpy as np
 
 # Global Dictionary of Flags
 flags = {
@@ -47,8 +47,8 @@ class faster_rcnn_resnet101(Model):
         
     def _set_placeholders(self):
         self.x = tf.placeholder(tf.float32, [None, flags['image_dim'], flags['image_dim'], 1], name='x')
-        self.gt_boxes = tf.placeholder(tf.int32, shape=[5])         # [x1,y1,x2,y2,label]
-        self.im_dims = tf.placeholder(tf.in32, shape=[2])
+        self.gt_boxes = tf.placeholder(tf.int32, shape=[5], name='gt_boxes')         # [x1,y1,x2,y2,label]
+        self.im_dims = tf.placeholder(tf.in32, shape=[2], name='im_dims')
         
     def _set_summaries(self):
         ''' Define summaries for TensorBoard '''
@@ -81,6 +81,7 @@ class faster_rcnn_resnet101(Model):
         # R-CNN Classification
         self.fast_rcnn_net = fast_rcnn(featureMaps, rois, self.im_dims, flags)
         
+        
     def _optimizer(self):
         ''' Define losses and initialize optimizer '''
         # Losses
@@ -89,8 +90,44 @@ class faster_rcnn_resnet101(Model):
         self.fast_rcnn_cls_loss = self.fast_rcnn_net.get_fast_rcnn_cls_loss()
         self.fast_rcnn_bbox_loss = self.fast_rcnn_net.get_fast_rcnn_bbox_loss()
         
+        # Total Loss
         self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss + self.fast_rcnn_bbox_loss)
         
+        # Optimization operation
         self.train.optimizer = tf.train.AdamOptimizer().minimize(self.cost)
         
         
+    def _run_train_iter(self):
+        """ Run training iteration"""
+        summary, _ = self.sess.run([self.merged, self.optimizer])
+        return summary
+
+    def _run_train_metrics_iter(self):
+        """ Run training iteration with metrics output """
+        summary, self.loss, _ = self.sess.run([self.merged, self.cost, self.optimizer])
+        return summary        
+
+    def train(self):
+        """ Run training function. Save model upon completion """
+        iterations = np.ceil(self.num_train_images/self.flags['batch_size']) * self.flags['num_epochs']
+        self.print_log('Training for %d iterations' % iterations)
+        for i in range(iterations):
+            if self.step % self.flags['display_step'] != 0:
+                summary = self._run_train_iter()
+            else:
+                summary = self._run_train_metrics_iter()
+                self._record_train_metrics()
+            self._record_training_step(summary)
+            print(self.step)
+        self._save_model(section=1)        
+        
+        
+        
+def main():
+    flags['seed'] = 1234
+    model = faster_rcnn_resnet101(flags, run_num=1)
+    model.train()
+#    model.run("test")
+
+if __name__ == "__main__":
+    main()
