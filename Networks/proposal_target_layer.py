@@ -15,7 +15,6 @@ https://github.com/rbgirshick/py-faster-rcnn/blob/master/lib/rpn/proposal_target
 # Written by Ross Girshick and Sean Bell
 # --------------------------------------------------------
 
-import pyximport; pyximport.install()
 import numpy as np
 import numpy.random as npr
 import tensorflow as tf

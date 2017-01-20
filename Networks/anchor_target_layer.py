@@ -21,7 +21,6 @@ https://github.com/rbgirshick/py-faster-rcnn/blob/master/lib/rpn/anchor_target_l
 import sys
 sys.path.append('../')
 
-import pyximport; pyximport.install()
 import numpy as np
 import numpy.random as npr
 import tensorflow as tf

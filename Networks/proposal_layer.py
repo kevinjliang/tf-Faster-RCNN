@@ -21,7 +21,6 @@ https://github.com/rbgirshick/py-faster-rcnn/blob/master/lib/rpn/proposal_layer.
 # --------------------------------------------------------
 
 import numpy as np
-import pyximport; pyximport.install()
 import tensorflow as tf
 
 from Lib.bbox_transform import bbox_transform_inv, clip_boxes
