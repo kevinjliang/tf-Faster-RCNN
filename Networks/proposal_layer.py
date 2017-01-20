@@ -26,7 +26,7 @@ import tensorflow as tf
 from Lib.bbox_transform import bbox_transform_inv, clip_boxes
 from Lib.fast_rcnn_config import cfg
 from Lib.generate_anchors import generate_anchors
-from Lib.gpu_nms import gpu_nms as nms
+from Lib.nms_wrapper import nms
 
 
 def proposal_layer(rpn_bbox_cls_prob, rpn_bbox_pred, im_dims, cfg_key, _feat_stride, anchor_scales):

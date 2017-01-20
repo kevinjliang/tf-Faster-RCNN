@@ -1,5 +1,5 @@
 *.pyc
 *__pycache__
 build/*
-Lib/*.c
-Lib/*.so
+*.c
+*.so
