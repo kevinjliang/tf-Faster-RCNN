@@ -50,7 +50,7 @@ class rpn:
             rpn_layers.conv2d(filter_size=3,output_channels=512)
             features = rpn_layers.get_output()
             
-            with tf.variable.scope('bbox'):
+            with tf.variable_scope('bbox'):
             # Box-classification layer (objectness)
                 self.rpn_bbox_cls_layers = Layers(features)
                 self.rpn_bbox_cls_layers.conv2d(filter_size=1,output_channels=_num_anchors*2,activation_fn=None)        
@@ -93,9 +93,9 @@ class rpn:
     def get_rpn_bbox_loss(self):
         rpn_bbox_pred = self.get_rpn_bbox_pred()
         rpn_bbox_targets = self.get_rpn_bbox_targets()
-        rpn_inside_weights = self.get_rpn_inside_weights()
-        rpn_outside_weights = self.get_rpn_outside_weights()
-        return rpn_bbox_loss(rpn_bbox_pred, rpn_bbox_targets, rpn_inside_weights, rpn_outside_weights)
+        rpn_bbox_inside_weights = self.get_rpn_bbox_inside_weights()
+        rpn_bbox_outside_weights = self.get_rpn_bbox_outside_weights()
+        return rpn_bbox_loss(rpn_bbox_pred, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights)
         
 
 class roi_proposal:

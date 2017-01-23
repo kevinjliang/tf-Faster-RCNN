@@ -24,7 +24,7 @@ def rpn_cls_loss(rpn_cls_score,rpn_labels):
     
     # Stack all classification scores into 2D matrix
     rpn_cls_score = tf.transpose(rpn_cls_score,[0,3,1,2])
-    rpn_cls_score = tf.reshape(rpn_cls_score,[shape[0],2,shape[3]/2*shape[1],shape[2]])
+    rpn_cls_score = tf.reshape(rpn_cls_score,[shape[0],2,shape[3]//2*shape[1],shape[2]])
     rpn_cls_score = tf.transpose(rpn_cls_score,[0,2,3,1])
     rpn_cls_score = tf.reshape(rpn_cls_score,[-1,2])
     
