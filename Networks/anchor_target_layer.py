@@ -46,7 +46,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_dims, _feat_stride, anchor_s
     return rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights
 
 
-def _anchor_target_layer_py(rpn_cls_score, gt_boxes, im_dims, _feat_stride = [16,], anchor_scales = [8, 16, 32]):
+def _anchor_target_layer_py(rpn_cls_score, gt_boxes, im_dims, _feat_stride, anchor_scales):
     """
     Python version    
     

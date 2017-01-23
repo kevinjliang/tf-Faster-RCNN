@@ -66,9 +66,10 @@ class faster_rcnn_resnet101(Model):
         # Convolutional Feature Extractor: ResNet101
         self.cnn = resnet(101,self.x)
         featureMaps = self.cnn.get_output()
+        _feat_stride = self.cnn.get_feat_stride()
         
         # Region Proposal Network (RPN)
-        self.rpn_net = rpn(featureMaps,self.gt_boxes,self.im_dims,flags)
+        self.rpn_net = rpn(featureMaps,self.gt_boxes,self.im_dims,_feat_stride,flags)
         
         rpn_cls_score = self.rpn_net.get_rpn_cls_score()
         rpn_bbox_pred = self.rpn_net.get_rpn_bbox_pred()

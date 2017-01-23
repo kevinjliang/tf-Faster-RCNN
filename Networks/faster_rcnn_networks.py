@@ -32,10 +32,11 @@ class rpn:
     (TensorBase Layers object) of the last layer, generate bounding boxes 
     relative to anchor boxes and give an "objectness" score to each
     '''
-    def __init__(self,featureMaps,gt_boxes,im_dims,flags):
+    def __init__(self,featureMaps,gt_boxes,im_dims,_feat_stride,flags):
         self.featureMaps = featureMaps
         self.gt_boxes = gt_boxes
         self.im_dims = im_dims
+        self._feat_stride = _feat_stride
         self.flags = flags
         self._network()
         
@@ -49,18 +50,20 @@ class rpn:
             rpn_layers.conv2d(filter_size=3,output_channels=512)
             features = rpn_layers.get_output()
             
+            with tf.variable.scope('bbox'):
             # Box-classification layer (objectness)
-            self.rpn_bbox_cls_layers = Layers(features)
-            self.rpn_bbox_cls_layers.conv2d(filter_size=1,output_channels=_num_anchors*2,activation_fn=None)        
+                self.rpn_bbox_cls_layers = Layers(features)
+                self.rpn_bbox_cls_layers.conv2d(filter_size=1,output_channels=_num_anchors*2,activation_fn=None)        
             
-            # Anchor Target Layer (anchors and deltas)
-            rpn_cls_score = self.rpn_bbox_cls_layers.get_output()
-            self.rpn_labels,self.rpn_bbox_targets,self.rpn_bbox_inside_weights,self.rpn_bbox_outside_weights = \
-                anchor_target_layer(rpn_cls_score=rpn_cls_score,gt_boxes=self.gt_boxes,im_dims=self.im_dims,anchor_scales=self.flags['anchor_scales'])       
+                # Anchor Target Layer (anchors and deltas)
+                rpn_cls_score = self.rpn_bbox_cls_layers.get_output()
+                self.rpn_labels,self.rpn_bbox_targets,self.rpn_bbox_inside_weights,self.rpn_bbox_outside_weights = \
+                    anchor_target_layer(rpn_cls_score=rpn_cls_score,gt_boxes=self.gt_boxes,im_dims=self.im_dims,_feat_stride=self._feat_stride,anchor_scales=self.flags['anchor_scales'])       
             
+            with tf.variable_scope('cls'):
             # Bounding-Box regression layer (bounding box predictions)
-            self.rpn_bbox_pred_layers = Layers(features)
-            self.rpn_bbox_pred_layers.conv2d(filter_size=1,output_channels=_num_anchors*4,activation_fn=None)
+                self.rpn_bbox_pred_layers = Layers(features)
+                self.rpn_bbox_pred_layers.conv2d(filter_size=1,output_channels=_num_anchors*4,activation_fn=None)
 
     # Get functions
     def get_rpn_cls_score(self):
