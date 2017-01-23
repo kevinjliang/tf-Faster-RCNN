@@ -11,7 +11,6 @@ import sys
 sys.path.append('../')
 
 from Lib.TensorBase.tensorbase.base import Model, Data
-#from Lib.TensorBase.tensorbase.base import Layers
 from Lib.TensorBase.tensorbase.data import Mnist
 
 from Networks.resnet import resnet
@@ -125,10 +124,8 @@ class faster_rcnn_resnet101(Model):
             example_serialized,
             features={
                 'image': tf.FixedLenFeature([], tf.string),
-                'label': tf.FixedLenFeature([10], tf.int64, default_value=[-1]*10),  # 10 classes in MNIST
-                'height': tf.FixedLenFeature([], tf.int64),
-                'width': tf.FixedLenFeature([], tf.int64),
-                'depth': tf.FixedLenFeature([], tf.int64),
+                'gt_boxes': tf.FixedLenFeature([5], tf.int64, default_value=[-1]*5),  # 10 classes in MNIST
+                'dims': tf.FixedLenFeature([2], tf.int64, default_value=[-1]*2)
             })
         # now return the converted data
         label = features['label']
@@ -137,10 +134,22 @@ class faster_rcnn_resnet101(Model):
         image = tf.reshape(image, [128, 128, 1])
         return image, tf.cast(label, tf.int32)
 
+    def print_test_image(self):
+        import matplotlib
+        matplotlib.use('TkAgg')  # Or any other X11 back-end
+        import matplotlib.pyplot as pyplot
+        image, gt_boxes, im_dims = self.sess.run([self.x, self.gt_boxes, self.im_dims])
+        print("Image Dimensions: (%d, %d)" % (im_dims[0], im_dims[1]))
+        print("Ground Truth Coordinates: (%d, %d, %d, %d)" % (gt_boxes[0], gt_boxes[1], gt_boxes[2], gt_boxes[3]))
+        print("Label: %d" % gt_boxes[4])
+        print("Printing output image...")
+        pyplot.imshow(image, cmap="gray")
+        pyplot.show()
+
 def main():
     flags['seed'] = 1234
     model = faster_rcnn_resnet101(flags, run_num=1)
-    model.train()
+    model.print_test_image()
 
 if __name__ == "__main__":
     main()
