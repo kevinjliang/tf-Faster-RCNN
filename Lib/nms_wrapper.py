@@ -13,9 +13,9 @@ Created on Fri Jan 20 15:35:33 2017
 # Written by Ross Girshick
 # --------------------------------------------------------
 
-from fast_rcnn_config import cfg
-from nms.gpu_nms import gpu_nms
-from nms.cpu_nms import cpu_nms
+from .fast_rcnn_config import cfg
+from .nms.gpu_nms import gpu_nms
+from .nms.cpu_nms import cpu_nms
 
 def nms(dets, thresh, force_cpu=False):
     """Dispatch to either CPU or GPU NMS implementations."""
