@@ -62,22 +62,24 @@ class faster_rcnn_tests():
     def print_test_image(self):
         """ Takes in a .tfrecord file and plots the image batch with bounding box """
         file = '/home/dcs41/Documents/tf-Faster-RCNN/Data/data_clutter/clutter_mnist_valid.tfrecords'
-        im_dims, gt_boxes, image = Data.batch_inputs(self.read_and_decode, file, batch_size=32, min_examples=100, num_readers=1, num_threads=1)
+        im_dims, gt_boxes, image = Data.batch_inputs(self.read_and_decode, file, batch_size=32)
         self.sess.run(tf.local_variables_initializer())
         self.sess.run(tf.global_variables_initializer())
         threads, coord = Data.init_threads(self.sess)
         _, gt_boxes, image_out = self.sess.run([im_dims, gt_boxes, image])
-        print("Using First Image of the Batch..")
-        print("Image Max Value (should be less than 1): %f" % image_out[0].max())
-        print("Image Min Value (should be greater than -1): %f" % image_out[0].min())
-        print("Image Mean Value (should be equal to 0): %f" % image_out[0].mean())
-        print("Digit: %d" % gt_boxes[0][4])
         self.plot_img(image_out[0], gt_boxes[0])
         Data.exit_threads(threads, coord)
 
     @staticmethod
     def plot_img(image, gt_box):
         """ Takes an image and bounding box coordinates and displays it using matplotlib """
+
+        # First print out image metrics
+        print("Using First Image of the Batch..")
+        print("Image Max Value (should be less than 1): %f" % image.max())
+        print("Image Min Value (should be greater than -1): %f" % image.min())
+        print("Image Mean Value (should be equal to 0): %f" % image.mean())
+        print("Digit: %d" % gt_box[4])
 
         # Import matplotlib and setup axes
         import matplotlib
@@ -87,7 +89,7 @@ class faster_rcnn_tests():
         fig, ax = plt.subplots(1)
 
         # Plot Image First
-        ax.imshow(image, cmap="gray")
+        ax.imshow(np.squeeze(image), cmap="gray")
 
         # Calculate Bounding Box Rectangle and plot it
         width = gt_box[3] - gt_box[1]
@@ -111,7 +113,7 @@ class faster_rcnn_tests():
         # now return the converted data
         gt_boxes = features['gt_boxes']
         dims = features['dims']
-        image = tf.decode_raw(features['image'], tf.float64)
+        image = tf.decode_raw(features['image'], tf.float32)
         image = tf.reshape(image, [128, 128])
         return dims, gt_boxes, image
         

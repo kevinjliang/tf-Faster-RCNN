@@ -75,7 +75,7 @@ def convert_tfrecords(all_data, all_labels, image_dim, data_directory):
             label_np = labels[example_idx].astype("int32")
             label = label_np.tolist()
             pixels, gt_box = generate_cluttered_digit(data[example_idx].reshape((28, 28)), image_dim, label, data)
-            pixels = pixels.flatten()
+            pixels = np.float32(pixels.flatten())
             examples.append((pixels.tostring(), gt_box, [image_dim, image_dim]))
 
         # Shuffle all examples. This is imperative for good mixing with TF queueing and shuffling.
