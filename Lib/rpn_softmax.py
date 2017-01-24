@@ -33,7 +33,7 @@ def rpn_softmax(rpn_cls_score):
     
     # Reshape rpn_cls_score to prepare for softmax
     rpn_cls_score = tf.transpose(rpn_cls_score,[0,3,1,2])
-    rpn_cls_score = tf.reshape(rpn_cls_score,[shape[0],2,shape[3]/2*shape[1],shape[2]])
+    rpn_cls_score = tf.reshape(rpn_cls_score,[shape[0],2,shape[3]//2*shape[1],shape[2]])
     rpn_cls_score = tf.transpose(rpn_cls_score,[0,2,3,1])
     
     # Softmax

@@ -13,7 +13,8 @@ sys.path.append('../')
 from Lib.TensorBase.tensorbase.base import Model, Data
 from Lib.TensorBase.tensorbase.data import Mnist
 
-from Networks.resnet import resnet
+#from Networks.resnet import resnet
+from Networks.convnet import convnet
 from Networks.faster_rcnn_networks import rpn, roi_proposal, fast_rcnn
 
 import tensorflow as tf
@@ -42,7 +43,7 @@ class faster_rcnn_resnet101(Model):
     def __init__(self, flags_input, run_num):
         super().__init__(flags_input, run_num)
         self.print_log("Seed: %d" % flags['seed'])
-        self.data = Mnist(flags_input)
+#        self.data = Mnist(flags_input)
         
     def _data(self):
         file = '/home/dcs41/Documents/tf-Faster-RCNN/Data/clutter_data/clutter_mnist_train.tfrecords'
@@ -60,7 +61,9 @@ class faster_rcnn_resnet101(Model):
     def _network(self):
         ''' Define the network outputs '''
         # Convolutional Feature Extractor: ResNet101
-        self.cnn = resnet(101, self.x)
+#        self.cnn = resnet(101, self.x)
+        # Simpler convnet for debugging
+        self.cnn = convnet(self.x,[3,3,3,3],[256,256,512,512],strides=[1,1,2,1])
         featureMaps = self.cnn.get_output()
         _feat_stride = self.cnn.get_feat_stride()
         
@@ -73,10 +76,8 @@ class faster_rcnn_resnet101(Model):
         # ROI proposal
         self.roi_proposal_net = roi_proposal(rpn_cls_score,rpn_bbox_pred,self.gt_boxes,self.im_dims,flags)
         
-        rois = self.roi_proposal_net.get_rois()
-        
         # R-CNN Classification
-        self.fast_rcnn_net = fast_rcnn(featureMaps, rois, self.im_dims, flags)
+        self.fast_rcnn_net = fast_rcnn(featureMaps, self.roi_proposal_net)
         
         
     def _optimizer(self):
@@ -128,15 +129,16 @@ class faster_rcnn_resnet101(Model):
                 'dims': tf.FixedLenFeature([2], tf.int64, default_value=[-1]*2)
             })
         # now return the converted data
-        label = features['label']
         image = tf.decode_raw(features['image'], tf.float32)
         image.set_shape([128 * 128])
         image = tf.reshape(image, [128, 128, 1])
-        return image, tf.cast(label, tf.int32)
+        gt_boxes = features['gt_boxes']
+        dims = features['dims']
+        return image, tf.cast(gt_boxes, tf.int32), tf.cast(dims, tf.int32)
 
     def print_test_image(self):
-        import matplotlib
-        matplotlib.use('TkAgg')  # Or any other X11 back-end
+#        import matplotlib
+#        matplotlib.use('TkAgg')  # Or any other X11 back-end
         import matplotlib.pyplot as pyplot
         image, gt_boxes, im_dims = self.sess.run([self.x, self.gt_boxes, self.im_dims])
         print("Image Dimensions: (%d, %d)" % (im_dims[0], im_dims[1]))
