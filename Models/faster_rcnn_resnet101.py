@@ -43,7 +43,7 @@ class faster_rcnn_resnet101(Model):
     def __init__(self, flags_input, run_num):
         super().__init__(flags_input, run_num)
         self.print_log("Seed: %d" % flags['seed'])
-        self.data = Mnist(flags_input)
+#        self.data = Mnist(flags_input)
         
     def _data(self):
         file = '/home/dcs41/Documents/tf-Faster-RCNN/Data/clutter_data/clutter_mnist_train.tfrecords'
@@ -137,8 +137,8 @@ class faster_rcnn_resnet101(Model):
         return image, tf.cast(gt_boxes, tf.int32), tf.cast(dims, tf.int32)
 
     def print_test_image(self):
-        import matplotlib
-        matplotlib.use('TkAgg')  # Or any other X11 back-end
+#        import matplotlib
+#        matplotlib.use('TkAgg')  # Or any other X11 back-end
         import matplotlib.pyplot as pyplot
         image, gt_boxes, im_dims = self.sess.run([self.x, self.gt_boxes, self.im_dims])
         print("Image Dimensions: (%d, %d)" % (im_dims[0], im_dims[1]))
