@@ -1,7 +1,9 @@
 *.pyc
 *.c
+*.cpp
 *.so
 *__pycache__
 build/*
 Logs/*
+Data/MNIST/*
 
