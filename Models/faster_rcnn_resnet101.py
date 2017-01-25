@@ -156,7 +156,8 @@ class faster_rcnn_resnet101(Model):
 def main():
     flags['seed'] = 1234
     model = faster_rcnn_resnet101(flags, run_num=1)
-    model.train()
+    summary = model._run_train_iter()
+    print("Survived")
 
 if __name__ == "__main__":
     main()
