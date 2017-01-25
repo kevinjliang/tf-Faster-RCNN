@@ -77,7 +77,7 @@ def fast_rcnn_cls_loss(fast_rcnn_cls_score, labels):
     Standard cross-entropy loss on logits
     '''
     # Cross entropy error
-    fast_rcnn_cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(fast_rcnn_cls_score, labels))
+    fast_rcnn_cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(tf.squeeze(fast_rcnn_cls_score), labels))
     
     return fast_rcnn_cross_entropy
     
