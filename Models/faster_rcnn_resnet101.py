@@ -120,6 +120,7 @@ class faster_rcnn_resnet101(Model):
     def train(self):
         """ Run training function. Save model upon completion """
         iterations = int(np.ceil(self.num_train_images/self.flags['batch_size']) * self.flags['num_epochs'])
+        threads, coord = Data.init_threads(self.sess)  # Begin Queues
         self.print_log('Training for %d iterations' % iterations)
         for i in range(iterations):
             if self.step % self.flags['display_step'] != 0:
@@ -129,7 +130,8 @@ class faster_rcnn_resnet101(Model):
                 self._record_train_metrics()
             self._record_training_step(summary)
             print(self.step)
-        self._save_model(section=1)        
+        self._save_model(section=1)
+        Data.exit_threads(threads, coord)  # Exit Queues
 
     def _record_train_metrics(self):
         """ Record training metrics """
