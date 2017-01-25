@@ -6,4 +6,4 @@
 build/*
 Logs/*
 Data/MNIST/*
-
+.ipynb_checkpoints
