@@ -34,9 +34,10 @@ from Lib.generate_anchors import generate_anchors
 def anchor_target_layer(rpn_cls_score, gt_boxes, im_dims, _feat_stride, anchor_scales):
     '''
     Make Python version of _anchor_target_layer_py below Tensorflow compatible
-    '''    
+    '''
     rpn_labels,rpn_bbox_targets,rpn_bbox_inside_weights,rpn_bbox_outside_weights = \
-        tf.py_func(_anchor_target_layer_py,[rpn_cls_score, gt_boxes, im_dims, _feat_stride, anchor_scales],[tf.float32,tf.float32,tf.float32,tf.float32])
+        tf.py_func(_anchor_target_layer_py, [rpn_cls_score, gt_boxes, im_dims, _feat_stride, anchor_scales],
+                   [tf.float32, tf.float32, tf.float32, tf.float32])
 
     rpn_labels = tf.convert_to_tensor(tf.cast(rpn_labels,tf.int32), name = 'rpn_labels')
     rpn_bbox_targets = tf.convert_to_tensor(rpn_bbox_targets, name = 'rpn_bbox_targets')
@@ -61,6 +62,7 @@ def _anchor_target_layer_py(rpn_cls_score, gt_boxes, im_dims, _feat_stride, anch
     # filter out-of-image anchors
     # measure GT overlap
     """
+    im_dims = im_dims[0]
     _anchors = generate_anchors(scales=np.array(anchor_scales))
     _num_anchors = _anchors.shape[0]
     
