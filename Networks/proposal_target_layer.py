@@ -28,7 +28,7 @@ def proposal_target_layer(rpn_rois, gt_boxes,_num_classes):
     '''
     Make Python version of _proposal_target_layer_py below Tensorflow compatible
     '''    
-    rois,labels,bbox_targets,bbox_inside_weights,bbox_outside_weights = tf.py_func(_proposal_target_layer_py,[rpn_rois, gt_boxes,_num_classes],[tf.float32,tf.float32,tf.float32,tf.float32,tf.float32])
+    rois,labels,bbox_targets,bbox_inside_weights,bbox_outside_weights = tf.py_func(_proposal_target_layer_py,[rpn_rois, gt_boxes,_num_classes],[tf.float32,tf.int32,tf.float32,tf.float32,tf.float32])
 
     rois = tf.reshape(rois,[-1,5] , name = 'rois') 
     labels = tf.convert_to_tensor(tf.cast(labels,tf.int32), name = 'labels')
@@ -76,7 +76,7 @@ def _proposal_target_layer_py(rpn_rois, gt_boxes,_num_classes):
 
     bbox_outside_weights = np.array(bbox_inside_weights > 0).astype(np.float32)
 
-    return rois,labels,bbox_targets,bbox_inside_weights,bbox_outside_weights
+    return np.float32(rois),labels,bbox_targets,bbox_inside_weights,bbox_outside_weights
     
 def _get_bbox_regression_labels(bbox_target_data, num_classes):
     """Bounding-box regression targets (bbox_target_data) are stored in a
@@ -87,7 +87,6 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes):
         bbox_target (ndarray): N x 4K blob of regression targets
         bbox_inside_weights (ndarray): N x 4K blob of loss weights
     """
-
     clss = bbox_target_data[:, 0]
     bbox_targets = np.zeros((clss.size, 4 * num_classes), dtype=np.float32)
     bbox_inside_weights = np.zeros(bbox_targets.shape, dtype=np.float32)
@@ -97,7 +96,7 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes):
         start = 4 * cls
         end = start + 4
         bbox_targets[ind, start:end] = bbox_target_data[ind, 1:]
-        bbox_inside_weights[ind, start:end] = cfg.TRAIN.BBOX_INSIDE_WEIGHTS
+        bbox_inside_weights[ind, start:end] = (1.0, 1.0, 1.0, 1.0)
     return bbox_targets, bbox_inside_weights
 
 

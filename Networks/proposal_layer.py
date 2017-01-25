@@ -30,7 +30,7 @@ from Lib.nms_wrapper import nms
 
 
 def proposal_layer(rpn_bbox_cls_prob, rpn_bbox_pred, im_dims, cfg_key, _feat_stride, anchor_scales):
-    return tf.reshape(tf.py_func(_proposal_layer_py,[rpn_bbox_cls_prob, rpn_bbox_pred, im_dims, cfg_key, _feat_stride, anchor_scales], [tf.float32]),[-1,5])
+    return tf.reshape(tf.py_func(_proposal_layer_py,[rpn_bbox_cls_prob, rpn_bbox_pred, im_dims[0], cfg_key, _feat_stride, anchor_scales], [tf.float32]),[-1,5])
 
 
 def _proposal_layer_py(rpn_bbox_cls_prob, rpn_bbox_pred, im_dims, cfg_key, _feat_stride = [16,],anchor_scales = [8, 16, 32]):
@@ -58,10 +58,10 @@ def _proposal_layer_py(rpn_bbox_cls_prob, rpn_bbox_pred, im_dims, cfg_key, _feat
     assert rpn_bbox_cls_prob.shape[0] == 1, \
         'Only single item batches are supported' 
         
-    pre_nms_topN  = cfg[cfg_key].RPN_PRE_NMS_TOP_N
-    post_nms_topN = cfg[cfg_key].RPN_POST_NMS_TOP_N
-    nms_thresh    = cfg[cfg_key].RPN_NMS_THRESH
-    min_size      = cfg[cfg_key].RPN_MIN_SIZE
+    pre_nms_topN  = 12000 # cfg[cfg_key].RPN_PRE_NMS_TOP_N
+    post_nms_topN = 2000 # cfg[cfg_key].RPN_POST_NMS_TOP_N
+    nms_thresh    = 0.7 # cfg[cfg_key].RPN_NMS_THRESH
+    min_size      = 12 # cfg[cfg_key].RPN_MIN_SIZE
     
     # the first set of _num_anchors channels are bg probs
     # the second set are the fg probs, which we want
