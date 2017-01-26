@@ -34,7 +34,7 @@ flags = {
 }
 
 
-class faster_rcnn_resnet101(Model):
+class faster_rcnn_conv5(Model):
     def __init__(self, flags_input, run_num):
         super().__init__(flags_input, run_num, vram=0.3)
         self.print_log("Seed: %d" % flags['seed'])
@@ -144,14 +144,28 @@ class faster_rcnn_resnet101(Model):
                 bbox, cls = self.sess.run([self.fast_rcnn_net.get_bbox_refinement(), self.fast_rcnn_net.get_cls_score()])
                 print(bbox.shape)
                 print(cls.shape)
-            if self.step % (self.flags['num_epochs'] * self.num_train_images) == 0:
+            if self.step % (self.num_train_images) == 0:
                 self._save_model(section=epochs)
                 epochs += 1
             self._record_training_step(summary)
             print(self.step)
         Data.exit_threads(self.threads, self.coord)  # Exit Queues
 
-    def eval(self): # TODO: fill in evaluation method
+    def eval(self):
+        """ Loop Through Evaluation Dataset and calculate metrics """
+        info = dict()
+        for c in range(flags['num_classes']):
+            info[c] = list()
+        for i in range(self.num_valid_images):
+            bbox, cls_score, gt_boxes = self.sess.run([self.fast_rcnn_net_valid.get_bbox_refinement(),
+                                                       self.fast_rcnn_net_valid.get_cls_score(), self.gt_boxes_valid])
+            for b in gt_boxes:
+                clss = b[4]
+                info[clss].append([bbox, clss, b[:4]])
+
+            print(self.step)
+        Data.exit_threads(self.threads, self.coord)  # Exit Queues
+
 
     @staticmethod
     def read_and_decode(example_serialized):
@@ -173,7 +187,8 @@ class faster_rcnn_resnet101(Model):
 
 def main():
     flags['seed'] = 1234
-    model = faster_rcnn_resnet101(flags, run_num=1)
+    run_num = sys.argv[1]
+    model = faster_rcnn_conv5(flags, run_num=run_num)
     model.train()
 
 
