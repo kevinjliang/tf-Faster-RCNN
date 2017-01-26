@@ -29,7 +29,7 @@ flags = {
     'batch_size': 1,
     'display_step': 200,
     'num_epochs': 50,
-    'num_classes': 10,
+    'num_classes': 11,   # 10 digits, +1 for background
     'anchor_scales': [1,2,3]
 }
 
@@ -63,7 +63,7 @@ class faster_rcnn_conv5(Model):
     def _network(self):
         ''' Define the network outputs '''
         with tf.variable_scope('model'):
-            self.cnn = convnet(self.x, [5, 3, 3, 3, 3], [64, 96, 128, 172, 256, 512], strides=[2, 2, 2, 2, 2, 2])
+            self.cnn = convnet(self.x, [5, 3, 3, 3, 3], [64, 96, 128, 172, 256], strides=[2, 2, 2, 2, 2])
             featureMaps = self.cnn.get_output()
             _feat_stride = self.cnn.get_feat_stride()
 
@@ -81,7 +81,7 @@ class faster_rcnn_conv5(Model):
 
         with tf.variable_scope('model', reuse=True):
             assert tf.get_variable_scope().reuse is True
-            self.cnn_valid = convnet(self.x, [5, 3, 3, 3, 3], [64, 96, 128, 172, 256, 512], strides=[2, 2, 2, 2, 2, 2])
+            self.cnn_valid = convnet(self.x_valid, [5, 3, 3, 3, 3], [64, 96, 128, 172, 256], strides=[2, 2, 2, 2, 2])
             featureMaps_valid = self.cnn_valid.get_output()
             _feat_stride_valid = self.cnn_valid.get_feat_stride()
 

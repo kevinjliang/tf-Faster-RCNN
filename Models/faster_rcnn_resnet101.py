@@ -31,14 +31,14 @@ flags = {
     'datasets': 'MNIST',
     'image_dim': 28,
     'hidden_size': 10,
-    'num_classes': 10,
+    'num_classes': 11,   # 10 digits, +1 for background
     'batch_size': 1,
     'display_step': 200,
     'weight_decay': 1e-7,
     'lr_decay': 0.999,
     'num_epochs': 10,
     'lr_iters': [(5e-3, 5000), (5e-3, 7500), (5e-4, 10000), (5e-5, 10000)],
-    'anchor_scales': [8,16,32]
+    'anchor_scales': [1,2,3]
 }
 
 class faster_rcnn_resnet101(Model):
@@ -65,7 +65,7 @@ class faster_rcnn_resnet101(Model):
         # Convolutional Feature Extractor: ResNet101
 #        self.cnn = resnet(101, self.x)
         # Simpler convnet for debugging
-        self.cnn = convnet(self.x, [5, 3, 3, 3, 3], [64, 96, 128, 172, 256, 512], strides=[2, 2, 2, 2, 2, 2])
+        self.cnn = convnet(self.x, [5, 3, 3, 3, 3, 3], [64, 96, 128, 172, 256, 512], strides=[2, 2, 2, 2, 2, 2])
         featureMaps = self.cnn.get_output()
         _feat_stride = self.cnn.get_feat_stride()
         
@@ -158,7 +158,7 @@ class faster_rcnn_resnet101(Model):
 def main():
     flags['seed'] = 1234
     model = faster_rcnn_resnet101(flags, run_num=1)
-    summary = model._run_train_iter()
+    model.train()
     print("Survived")
 
 if __name__ == "__main__":
