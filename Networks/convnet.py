@@ -34,6 +34,10 @@ class convnet:
         
     def _network(self, x):
         conv_layers = Layers(x)
+        
+        # Make sure that number of layers is consistent
+        assert len(self.output_channels) == self.depth
+        assert len(self.stride) == self.depth
             
         # Convolutional layers
         scope = 'convnet' + str(self.depth)
