@@ -93,10 +93,10 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes):
     inds = np.where(clss > 0)[0]
     for ind in inds:
         cls = clss[ind]
-        start = 4 * cls
+        start = int(4 * cls)
         end = start + 4
         bbox_targets[ind, start:end] = bbox_target_data[ind, 1:]
-        bbox_inside_weights[ind, start:end] = (1.0, 1.0, 1.0, 1.0)
+        bbox_inside_weights[ind, start:end] = (1, 1, 1, 1)
     return bbox_targets, bbox_inside_weights
 
 
