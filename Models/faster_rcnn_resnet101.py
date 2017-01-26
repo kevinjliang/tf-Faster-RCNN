@@ -65,7 +65,7 @@ class faster_rcnn_resnet101(Model):
         # Convolutional Feature Extractor: ResNet101
 #        self.cnn = resnet(101, self.x)
         # Simpler convnet for debugging
-        self.cnn = convnet(self.x, [5, 3, 3, 3, 3, 3], [64, 96, 128, 172, 256, 512], strides=[2, 2, 2, 2, 2, 2])
+        self.cnn = convnet(self.x, [5, 3, 3, 3, 3], [64, 96, 128, 172, 256], strides=[2, 2, 2, 2, 2])
         featureMaps = self.cnn.get_output()
         _feat_stride = self.cnn.get_feat_stride()
         

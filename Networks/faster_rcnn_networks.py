@@ -68,7 +68,7 @@ class rpn:
     # Get functions
     def get_rpn_cls_score(self):
         return self.rpn_bbox_cls_layers.get_output()
-    
+
     def get_rpn_labels(self):
         return self.rpn_labels
         
@@ -102,11 +102,13 @@ class roi_proposal:
     '''
     Propose highest scoring boxes to the rcnn classifier
     '''
-    def __init__(self,rpn_cls_score,rpn_bbox_pred,gt_boxes,im_dims,flags):
-        self.rpn_cls_score = rpn_cls_score
-        self.rpn_bbox_pred = rpn_bbox_pred
+    def __init__(self,rpn_net,gt_boxes,im_dims,key,flags):
+        self.rpn_net = rpn_net
+        self.rpn_cls_score = rpn_net.get_rpn_cls_score()
+        self.rpn_bbox_pred = rpn_net.get_rpn_bbox_pred()
         self.gt_boxes = gt_boxes
         self.im_dims = im_dims
+        self.key = key
         self.flags = flags
         self._network()
         
@@ -115,11 +117,11 @@ class roi_proposal:
         self.rpn_cls_prob = rpn_softmax(self.rpn_cls_score)
         
         # Determine best proposals
-        self.blobs = proposal_layer(rpn_bbox_cls_prob=self.rpn_cls_prob, rpn_bbox_pred=self.rpn_bbox_pred, im_dims=self.im_dims, cfg_key='TRAIN', _feat_stride=2**5, anchor_scales=self.flags['anchor_scales'])
+        blobs = proposal_layer(rpn_bbox_cls_prob=self.rpn_cls_prob, rpn_bbox_pred=self.rpn_bbox_pred, im_dims=self.im_dims, cfg_key=self.key, _feat_stride=self.rpn_net._feat_stride, anchor_scales=self.flags['anchor_scales'])
     
         # Calculate targets for proposals
         self.rois, self.labels, self.bbox_targets, self.bbox_inside_weights, self.bbox_outside_weights = \
-            proposal_target_layer(rpn_rois=self.blobs, gt_boxes=self.gt_boxes,_num_classes=self.flags['num_classes'])
+            proposal_target_layer(rpn_rois=blobs, gt_boxes=self.gt_boxes,_num_classes=self.flags['num_classes'])
     
     def get_rois(self):
         return self.rois
@@ -177,6 +179,10 @@ class fast_rcnn:
     # Get functions
     def get_cls_score(self):
         return self.rcnn_cls_layers.get_output()
+        
+    def get_cls_prob(self):
+        logits = self.get_cls_score()
+        return tf.nn.softmax(logits)
         
     def get_bbox_refinement(self):
         return self.rcnn_bbox_layers.get_output()

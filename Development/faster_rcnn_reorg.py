@@ -5,6 +5,8 @@ Created on Sat Dec 31 13:22:36 2016
 @author: Kevin Liang
 
 Faster R-CNN model using ResNet as the convolutional feature extractor
+
+Reorganizing a few things relative to faster_rcnn_conv5
 """
 
 import sys
@@ -42,12 +44,17 @@ class faster_rcnn_resnet101(Model):
 
     def _data(self):
         file_train = '/home/dcs41/Documents/tf-Faster-RCNN/Data/data_clutter/clutter_mnist_train.tfrecords'
-        self.x, self.gt_boxes, self.im_dims = Data.batch_inputs(self.read_and_decode, file_train,
+        self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'] = Data.batch_inputs(self.read_and_decode, file_train,
                                                                 batch_size=self.flags['batch_size'])
+        
         file_valid = '/home/dcs41/Documents/tf-Faster-RCNN/Data/data_clutter/clutter_mnist_valid.tfrecords'
-        self.x_valid, self.gt_boxes_valid, self.im_dims_valid = Data.batch_inputs(self.read_and_decode, file_valid,
-                                                                                  mode="eval",
-                                                                                  batch_size=self.flags['batch_size'])
+        self.x['VALID'], self.gt_boxes['VALID'], self.im_dims['VALID']= Data.batch_inputs(self.read_and_decode, file_valid, mode="eval",
+                                                                batch_size=self.flags['batch_size'])
+        
+        self.x['TEST']        = tf.placeholder(tf.float32,[None,128,128,1])
+        self.gt_boxes['TEST'] = tf.placeholder(tf.int32,[5])
+        self.im_dims['TEST']  = tf.placeholder(tf.int32,[2])        
+        
         self.num_train_images = 55000
         self.num_valid_images = 5000
         self.num_test_images  = 10000
@@ -59,45 +66,38 @@ class faster_rcnn_resnet101(Model):
         tf.summary.scalar("RPN_bbox_Loss", self.rpn_bbox_loss)
         tf.summary.scalar("Fast_RCNN_Cls_Loss", self.fast_rcnn_cls_loss)
         tf.summary.scalar("Fast_RCNN_Bbox_Loss", self.fast_rcnn_bbox_loss)
-        tf.summary.image("x", self.x)
+        tf.summary.image("x_train", self.x['TRAIN'])
 
     def _network(self):
         ''' Define the network outputs '''
+        # Train network
         with tf.variable_scope('model'):
-            self.cnn = convnet(self.x, [5, 3, 3, 3, 3], [64, 96, 128, 172, 256], strides=[2, 2, 2, 2, 2])
-            featureMaps = self.cnn.get_output()
-            _feat_stride = self.cnn.get_feat_stride()
+            self._faster_rcnn(self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'], 'TRAIN')
 
-            # Region Proposal Network (RPN)
-            self.rpn_net = rpn(featureMaps, self.gt_boxes, self.im_dims, _feat_stride, flags)
-
-            rpn_cls_score = self.rpn_net.get_rpn_cls_score()
-            rpn_bbox_pred = self.rpn_net.get_rpn_bbox_pred()
-
-            # Roi Pooling
-            roi_proposal_net = roi_proposal(rpn_cls_score, rpn_bbox_pred, self.gt_boxes, self.im_dims, flags)
-
-            # R-CNN Classification
-            self.fast_rcnn_net = fast_rcnn(featureMaps, roi_proposal_net)
-
+        # Valid network => Uses same weights as train network
         with tf.variable_scope('model', reuse=True):
             assert tf.get_variable_scope().reuse is True
-            self.cnn_valid = convnet(self.x_valid, [5, 3, 3, 3, 3], [64, 96, 128, 172, 256], strides=[2, 2, 2, 2, 2])
-            featureMaps_valid = self.cnn_valid.get_output()
-            _feat_stride_valid = self.cnn_valid.get_feat_stride()
+            self._faster_rcnn(self.x['VALID'], self.gt_boxes['VALID'], self.im_dims['VALID'], 'VALID')
+            
+        # Test network => Uses same weights as train network
+        with tf.variable_scope('model', reuse=True):
+            assert tf.get_variable_scope().reuse is True
+            self._faster_rcnn(self.x['TEST'], self.gt_boxes['TEST'], self.im_dims['TEST'], 'TEST')
+
+    def _faster_rcnn(self, x, gt_boxes, im_dims, key):
+            self.cnn[key] = convnet(x, [5, 3, 3, 3, 3], [64, 96, 128, 172, 256], strides=[2, 2, 2, 2, 2])
+            featureMaps = self.cnn[key].get_output()
+            _feat_stride = self.cnn[key].get_feat_stride()
 
             # Region Proposal Network (RPN)
-            rpn_net_valid = rpn(featureMaps_valid, self.gt_boxes_valid, self.im_dims_valid, _feat_stride_valid, flags)
-
-            rpn_cls_score_valid = rpn_net_valid.get_rpn_cls_score()
-            rpn_bbox_pred_valid = rpn_net_valid.get_rpn_bbox_pred()
+            self.rpn_net[key] = rpn(featureMaps, gt_boxes, im_dims, _feat_stride, flags)
 
             # Roi Pooling
-            self.roi_proposal_net_valid = roi_proposal(rpn_cls_score_valid, rpn_bbox_pred_valid, self.gt_boxes_valid, self.im_dims_valid, flags)
+            self.roi_proposal_net[key] = roi_proposal(self.rpn_net[key], gt_boxes, im_dims, key, flags)
 
-            # R-CNN Classification    
-            self.fast_rcnn_net_valid = fast_rcnn(featureMaps_valid, self.roi_proposal_net_valid)
-
+            # R-CNN Classification
+            self.fast_rcnn_net[key] = fast_rcnn(featureMaps, self.roi_proposal_net[key])
+            
     def _optimizer(self):
         ''' Define losses and initialize optimizer '''
         # Losses
@@ -117,7 +117,7 @@ class faster_rcnn_resnet101(Model):
         threads, coord = Data.init_threads(self.sess)  # Begin Queues
         print("Running 100 iterations of simple data transfer from queue to np.array")
         for i in range(100):
-            x, gt_boxes = self.sess.run([self.x, self.gt_boxes])
+            x, gt_boxes = self.sess.run([self.x['TRAIN'], self.gt_boxes['TRAIN']])
             print(i)
         # Plot an example
         faster_rcnn_tests.plot_img(x[0], gt_boxes[0])
@@ -177,7 +177,7 @@ class faster_rcnn_resnet101(Model):
         image = tf.reshape(image, [128, 128, 1])
         return image, tf.cast(gt_boxes, tf.int32), tf.cast(dims, tf.int32)
 
-
+        
 def main():
     flags['seed'] = 1234
     model = faster_rcnn_resnet101(flags, run_num=1)

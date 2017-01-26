@@ -13,7 +13,7 @@ Created on Thu Jan 26 10:40:11 2017
 # Written by Ross Girshick
 # --------------------------------------------------------
 
-# TODO: Add num_classes to config file
+# TODO: Add num_classes to config file, get rid of flags
 # import sys
 # sys.path.append('../')
 # from fast_rcnn_config import cfg
