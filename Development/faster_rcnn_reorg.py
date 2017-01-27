@@ -14,6 +14,7 @@ import sys
 sys.path.append('../')
 
 from Lib.TensorBase.tensorbase.base import Model, Data
+from Lib.test_aux import im_detect, vis_detections, apply_nms
 
 from Development.tests import faster_rcnn_tests
 
@@ -85,6 +86,7 @@ class faster_rcnn_resnet101(Model):
             self._faster_rcnn(self.x['TEST'], self.gt_boxes['TEST'], self.im_dims['TEST'], 'TEST')
 
     def _faster_rcnn(self, x, gt_boxes, im_dims, key):
+            # TODO: Switch to Layer convnet or resnet
             self.cnn[key] = convnet(x, [5, 3, 3, 3, 3], [64, 96, 128, 172, 256], strides=[2, 2, 2, 2, 2])
             featureMaps = self.cnn[key].get_output()
             _feat_stride = self.cnn[key].get_feat_stride()
@@ -156,9 +158,12 @@ class faster_rcnn_resnet101(Model):
         """ Evaluate network on the test set. """
         num_images = self.num_test_images
         self.print_log('Testing %d images' % num_images)
+#        test_list = 
         
         for i in range(num_images):
-            print("Stuff happens")
+            
+            inputs = []
+            cls_probs,boxes = im_detect(self, inputs, 'TEST')
 
     @staticmethod
     def read_and_decode(example_serialized):
