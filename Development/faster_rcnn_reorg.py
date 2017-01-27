@@ -22,12 +22,14 @@ from Networks.convnet import convnet
 from Networks.faster_rcnn_networks import rpn, roi_proposal, fast_rcnn
 
 import numpy as np
+from scipy.misc import imread
 import tensorflow as tf
 
 # Global Dictionary of Flags
 flags = {
-    'save_directory': './',
+    'data_directory': '../Data/',
     'model_directory': 'conv5/',
+    'save_directory': '../Logs/',
     'restore': False,
     'batch_size': 1,
     'display_step': 200,
@@ -44,17 +46,25 @@ class faster_rcnn_resnet101(Model):
         self.threads, self.coord = Data.init_threads(self.sess)
 
     def _data(self):
+        # Initialize placeholder dicts
+        self.x = {}
+        self.gt_boxes = {} 
+        self.im_dims = {}        
+
+        # Train data
         file_train = '/home/dcs41/Documents/tf-Faster-RCNN/Data/data_clutter/clutter_mnist_train.tfrecords'
         self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'] = Data.batch_inputs(self.read_and_decode, file_train,
                                                                 batch_size=self.flags['batch_size'])
         
+        # Validation data
         file_valid = '/home/dcs41/Documents/tf-Faster-RCNN/Data/data_clutter/clutter_mnist_valid.tfrecords'
         self.x['VALID'], self.gt_boxes['VALID'], self.im_dims['VALID']= Data.batch_inputs(self.read_and_decode, file_valid, mode="eval",
                                                                 batch_size=self.flags['batch_size'])
         
+        # Test data
         self.x['TEST']        = tf.placeholder(tf.float32,[None,128,128,1])
-        self.gt_boxes['TEST'] = tf.placeholder(tf.int32,[5])
-        self.im_dims['TEST']  = tf.placeholder(tf.int32,[2])        
+        self.gt_boxes['TEST'] = tf.placeholder(tf.int32,[None,5])
+        self.im_dims['TEST']  = tf.placeholder(tf.int32,[None,2])        
         
         self.num_train_images = 55000
         self.num_valid_images = 5000
@@ -71,6 +81,12 @@ class faster_rcnn_resnet101(Model):
 
     def _network(self):
         ''' Define the network outputs '''
+        # Initialize network dicts
+        self.cnn = {}
+        self.rpn_net = {}
+        self.roi_proposal_net = {}
+        self.fast_rcnn_net = {}
+        
         # Train network
         with tf.variable_scope('model'):
             self._faster_rcnn(self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'], 'TRAIN')
@@ -102,11 +118,11 @@ class faster_rcnn_resnet101(Model):
             
     def _optimizer(self):
         ''' Define losses and initialize optimizer '''
-        # Losses
-        self.rpn_cls_loss = self.rpn_net.get_rpn_cls_loss()
-        self.rpn_bbox_loss = self.rpn_net.get_rpn_bbox_loss()
-        self.fast_rcnn_cls_loss = self.fast_rcnn_net.get_fast_rcnn_cls_loss()
-        self.fast_rcnn_bbox_loss = self.fast_rcnn_net.get_fast_rcnn_bbox_loss()
+        # Losses (come from TRAIN networks)
+        self.rpn_cls_loss = self.rpn_net['TRAIN'].get_rpn_cls_loss()
+        self.rpn_bbox_loss = self.rpn_net['TRAIN'].get_rpn_bbox_loss()
+        self.fast_rcnn_cls_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_cls_loss()
+        self.fast_rcnn_bbox_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_bbox_loss()
 
         # Total Loss
         self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss + self.fast_rcnn_bbox_loss)
@@ -144,7 +160,7 @@ class faster_rcnn_resnet101(Model):
             summary = self._run_train_iter()
             if self.step % self.flags['display_step'] == 0:
                 self._record_train_metrics()
-                bbox, cls = self.sess.run([self.fast_rcnn_net.get_bbox_refinement(), self.fast_rcnn_net.get_cls_score()])
+                bbox, cls = self.sess.run([self.fast_rcnn_net['TRAIN'].get_bbox_refinement(), self.fast_rcnn_net['TRAIN'].get_cls_score()])
                 print(bbox.shape)
                 print(cls.shape)
             if self.step % (self.flags['num_epochs'] * self.num_train_images) == 0:
@@ -156,14 +172,24 @@ class faster_rcnn_resnet101(Model):
 
     def test(self): 
         """ Evaluate network on the test set. """
-        num_images = self.num_test_images
-        self.print_log('Testing %d images' % num_images)
-#        test_list = 
+#        num_images = self.num_test_images
+#        self.print_log('Testing %d images' % num_images)
+
+        testfile = flags['data_directory'] + 'ImageSets/test.txt'
+        inputs = []
         
-        for i in range(num_images):
-            
-            inputs = []
-            cls_probs,boxes = im_detect(self, inputs, 'TEST')
+        with open(testfile) as f:
+            for line in f:
+                cMNISTfile = line.strip()
+                # Read image 
+                inputs[0] = imread(flags['data_directory'] + 'Images/' + cMNISTfile)
+                # Read annotations (groundtruth)
+                inputs[1] = np.loadtxt(flags['data_directory'] + 'Annotations/' + cMNISTfile)
+                # Feed (wxh) image dimensions
+                inputs[2] = inputs[0].shape[1:3]
+                
+                # Perform detections
+                cls_probs,boxes = im_detect(self, inputs, 'TEST')
 
     @staticmethod
     def read_and_decode(example_serialized):
