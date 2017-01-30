@@ -30,7 +30,6 @@ flags = {
     'nums': [5000, 55000, 10000],
     'all_names': ["valid", "train", "test"],
     'num_classes': 10,
-    'image_size': 128,
 }
 
 
@@ -53,7 +52,7 @@ def main():
         convert_tfrecords(all_data, all_labels, args['dim'], args['dir'])
     else:
         print('Saving Test Set as PNG and Text files.')
-        # convert_tfrecords(all_data[1:3], all_labels[1:3], args['dim'], args['dir'])
+        convert_tfrecords(all_data[:2], all_labels[:2], args['dim'], args['dir'])
         convert_test_png(all_data[2], all_labels[2], args['dim'], args['dir'])
 
 
@@ -106,9 +105,9 @@ def convert_test_png(test_data, test_labels, image_dim, data_directory):
     :param data_directory: string, location of folders to be saved
     """
     # Make the 3 folders if they don't exist already
-    make_directory(data_directory + 'Images/')
-    make_directory(data_directory + 'Annotations/')
-    make_directory(data_directory + 'Names')
+    make_directory(data_directory + 'Test/Images/')
+    make_directory(data_directory + 'Test/Annotations/')
+    make_directory(data_directory + 'Test/Names')
 
     filenames = list()
 
@@ -130,6 +129,7 @@ def convert_test_png(test_data, test_labels, image_dim, data_directory):
     names = open(data_directory + 'Names/names.txt', 'w')
     for fname in filenames:
         names.write("%s\n" % fname)
+
 
 def write(pixels, gt_boxes, dims, writer):
     """Write image pixels and label from one example to .tfrecords file"""
