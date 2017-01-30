@@ -23,28 +23,58 @@ from Lib.nms_wrapper import nms
 import numpy as np
 
 
-def im_detect(sess, net, im):
-    '''
-    Detect objects classes in an image
+#def im_detect_old(sess, fast_rcnn, im):
+#    '''
+#    Detect objects classes in an image
+#    
+#    sess: TensorFlow session
+#    net: fast-rcnn network capable of producing rois, bbox_pred, cls_score
+#    im: (tf.placeholder) image to test
+#    '''
+#    # Perform forward pass through Faster R-CNN network
+#    feed_dict={net.x: im, net.im_dims: im.shape}
+#    cls_prob, bbox_deltas, rois = sess.run([net.cls_prob, net.bbox_pred, net.rois],
+#                                         feed_dict=feed_dict)
+#
+#    # Bounding boxes proposed by RPN    
+#    boxes = rois[:,1:]
+#
+#    # Apply bounding box regression to RPN proposed boxes
+#    pred_boxes = bbox_transform_inv(boxes, bbox_deltas)
+#    pred_boxes = clip_boxes(pred_boxes, im.shape)
+#    
+#    return cls_prob, pred_boxes
     
-    sess: TensorFlow session
-    net: fast-rcnn network capable of producing rois, bbox_pred, cls_score
-    im: (tf.placeholder) image to test
+    
+def im_detect(model, inputs, key):
     '''
-    # Perform forward pass through Faster R-CNN network
-    feed_dict={net.x: im, net.im_dims: im.shape}
-    cls_prob, bbox_deltas, rois = sess.run([net.cls_prob, net.bbox_pred, net.rois],
-                                         feed_dict=feed_dict)
-
+    Detect objects in an input image using the model
+    
+    model: faster_rcnn model object
+    inputs: [0] The image to perform detections on
+            [1] Ground-truth boxes. Should be None, since this is evaluation
+            [2] Image dimensions 
+    key: the network to evaluate on (eg. VALID or TEST)
+    '''
+    # Graph Inputs for Detection
+    feed_dict = {model.x[key]: inputs[0], model.gt_boxes[key]: inputs[1], model.im_dims[key]: inputs[2]}
+    
+    # Graph Outputs for Detection
+    cls_prob_out = model.fast_rcnn_net[key].get_cls_prob()
+    bbox_ref_out = model.fast_rcnn_net[key].get_bbox_refinement()
+    rois_out     = model.roi_proposal_net[key].get_rois()
+    
+    # Evaluate the graph
+    cls_prob, bbox_deltas, rois = model.sess.run([cls_prob_out, bbox_ref_out, rois_out], feed_dict)  
+    
     # Bounding boxes proposed by RPN    
     boxes = rois[:,1:]
 
     # Apply bounding box regression to RPN proposed boxes
     pred_boxes = bbox_transform_inv(boxes, bbox_deltas)
-    pred_boxes = clip_boxes(pred_boxes, im.shape)
+    pred_boxes = clip_boxes(pred_boxes, inputs[2])
     
     return cls_prob, pred_boxes
-    
     
 def vis_detections(im, class_name, dets, thresh=0.3):
     """Visual debugging of detections."""

@@ -37,7 +37,7 @@ class convnet:
         
         # Make sure that number of layers is consistent
         assert len(self.output_channels) == self.depth
-        assert len(self.stride) == self.depth
+        assert len(self.strides) == self.depth
             
         # Convolutional layers
         scope = 'convnet' + str(self.depth)
