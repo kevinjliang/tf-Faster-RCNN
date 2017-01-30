@@ -25,18 +25,20 @@ import tensorflow as tf
 flags = {
     'save_directory': './',
     'model_directory': 'conv5/',
-    'restore': False,
+    'restore_file': 'part_3.ckpt.meta',
+    'restore': True,
+    'restore_folder': 2,
     'batch_size': 1,
-    'display_step': 200,
-    'num_epochs': 50,
+    'display_step': 50,
+    'num_epochs': 10,
     'num_classes': 11,   # 10 digits, +1 for background
-    'anchor_scales': [1,2,3]
+    'anchor_scales': [1, 2, 3]
 }
 
 
-class faster_rcnn_conv5(Model):
-    def __init__(self, flags_input, run_num):
-        super().__init__(flags_input, run_num, vram=0.3)
+class FasterRcnnConv5(Model):
+    def __init__(self, flags_input, run_num, restore):
+        super().__init__(flags_input, run_num, vram=0.3, restore=restore)
         self.print_log("Seed: %d" % flags['seed'])
         self.threads, self.coord = Data.init_threads(self.sess)
 
@@ -46,8 +48,7 @@ class faster_rcnn_conv5(Model):
                                                                 batch_size=self.flags['batch_size'])
         file_valid = '/home/dcs41/Documents/tf-Faster-RCNN/Data/data_clutter/clutter_mnist_valid.tfrecords'
         self.x_valid, self.gt_boxes_valid, self.im_dims_valid = Data.batch_inputs(self.read_and_decode, file_valid,
-                                                                                  mode="eval",
-                                                                                  batch_size=self.flags['batch_size'])
+                                                                                  mode="eval", batch_size=1, num_threads=1, num_readers=1)
         self.num_train_images = 55000
         self.num_valid_images = 5000
 
@@ -86,16 +87,16 @@ class faster_rcnn_conv5(Model):
             _feat_stride_valid = self.cnn_valid.get_feat_stride()
 
             # Region Proposal Network (RPN)
-            rpn_net_valid = rpn(featureMaps_valid, self.gt_boxes_valid, self.im_dims_valid, _feat_stride_valid, flags)
+            self.rpn_net_valid = rpn(featureMaps_valid, self.gt_boxes_valid, self.im_dims_valid, _feat_stride_valid, flags)
 
-            rpn_cls_score_valid = rpn_net_valid.get_rpn_cls_score()
-            rpn_bbox_pred_valid = rpn_net_valid.get_rpn_bbox_pred()
+            rpn_cls_score_valid = self.rpn_net_valid.get_rpn_cls_score()
+            rpn_bbox_pred_valid = self.rpn_net_valid.get_rpn_bbox_pred()
 
             # Roi Pooling
-            roi_proposal_net_valid = roi_proposal(rpn_cls_score_valid, rpn_bbox_pred_valid, self.gt_boxes_valid, self.im_dims_valid, flags)
+            self.roi_proposal_net_valid = roi_proposal(rpn_cls_score_valid, rpn_bbox_pred_valid, self.gt_boxes_valid, self.im_dims_valid, flags)
 
             # R-CNN Classification
-            self.fast_rcnn_net_valid = fast_rcnn(featureMaps_valid, roi_proposal_net_valid)
+            self.fast_rcnn_net_valid = fast_rcnn(featureMaps_valid, self.roi_proposal_net_valid)
 
     def _optimizer(self):
         ''' Define losses and initialize optimizer '''
@@ -137,14 +138,13 @@ class faster_rcnn_conv5(Model):
         epochs = 0
         iterations = int(np.ceil(self.num_train_images/self.flags['batch_size']) * self.flags['num_epochs'])
         self.print_log('Training for %d iterations' % iterations)
-        for i in range(iterations):
+        for i in range(3):
             summary = self._run_train_iter()
             if self.step % self.flags['display_step'] == 0:
                 self._record_train_metrics()
                 bbox, cls = self.sess.run([self.fast_rcnn_net.get_bbox_refinement(), self.fast_rcnn_net.get_cls_score()])
-                print(bbox.shape)
-                print(cls.shape)
-            if self.step % (self.num_train_images) == 0:
+                self.print_log('Number of predictions: %d' % bbox.shape[0])
+            if (self.step % 2) == 0:
                 self._save_model(section=epochs)
                 epochs += 1
             self._record_training_step(summary)
@@ -157,15 +157,42 @@ class faster_rcnn_conv5(Model):
         for c in range(flags['num_classes']):
             info[c] = list()
         for i in range(self.num_valid_images):
-            bbox, cls_score, gt_boxes = self.sess.run([self.fast_rcnn_net_valid.get_bbox_refinement(),
-                                                       self.fast_rcnn_net_valid.get_cls_score(), self.gt_boxes_valid])
-            for b in gt_boxes:
-                clss = b[4]
-                info[clss].append([bbox, clss, b[:4]])
-
-            print(self.step)
+            bboxes, cls_score, gt_boxes, image = self.sess.run([self.roi_proposal_net_valid.get_rois(),
+                                                       self.fast_rcnn_net_valid.get_cls_score(), self.gt_boxes_valid,
+                                                       self.x_valid])
+            print(gt_boxes)
+            self.vis_detections(np.squeeze(image[0]), str(gt_boxes[0][4]), gt_boxes, bboxes)
         Data.exit_threads(self.threads, self.coord)  # Exit Queues
 
+    def vis_detections(self, im, class_name, gt_boxes, dets):
+        """Visual debugging of detections."""
+        import matplotlib
+        matplotlib.use('TkAgg')  # For Mac OS
+        import matplotlib.pyplot as plt
+        import matplotlib.patches as patches
+        fig, ax = plt.subplots(1)
+        for i in range(np.minimum(10, dets.shape[0])):
+            bbox = dets[i,1:]
+            print(bbox)
+            ax.imshow(np.squeeze(im), cmap="gray")
+            self.plot_patch(ax, patches, bbox, gt=False)
+        plt.title(class_name)
+        self.plot_patch(ax, patches, gt_boxes[0][:4], gt=True)
+
+        # Display Final composite image
+        plt.show()
+
+    @staticmethod
+    def plot_patch(ax, patches, bbox, gt):
+        if gt is True:
+            color = 'g'
+        else:
+            color = 'r'
+        # Calculate Bounding Box Rectangle and plot it
+        width = bbox[3] - bbox[1]
+        height = bbox[2] - bbox[0]
+        rect = patches.Rectangle((bbox[1], bbox[0]), height, width, linewidth=2, edgecolor=color, facecolor='none')
+        ax.add_patch(rect)
 
     @staticmethod
     def read_and_decode(example_serialized):
@@ -174,7 +201,7 @@ class faster_rcnn_conv5(Model):
             example_serialized,
             features={
                 'image': tf.FixedLenFeature([], tf.string),
-                'gt_boxes': tf.FixedLenFeature([5], tf.int64, default_value=[-1] * 5),  # 10 classes in MNIST
+                'gt_boxes': tf.FixedLenFeature([5], tf.int64, default_value=[-1] * 5),
                 'dims': tf.FixedLenFeature([2], tf.int64, default_value=[-1] * 2)
             })
         # now return the converted data
@@ -188,8 +215,8 @@ class faster_rcnn_conv5(Model):
 def main():
     flags['seed'] = 1234
     run_num = sys.argv[1]
-    model = faster_rcnn_conv5(flags, run_num=run_num)
-    model.train()
+    model = FasterRcnnConv5(flags, run_num=run_num, restore=flags['restore_folder'])
+    model.eval()
 
 
 if __name__ == "__main__":
