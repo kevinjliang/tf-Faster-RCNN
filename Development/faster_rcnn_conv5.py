@@ -51,6 +51,7 @@ class FasterRcnnConv5(Model):
                                                                                   mode="eval", batch_size=1, num_threads=1, num_readers=1)
         self.num_train_images = 55000
         self.num_valid_images = 5000
+        self.num_test_images  = 10000
 
     def _summaries(self):
         ''' Define summaries for TensorBoard '''
