@@ -14,7 +14,7 @@ Created on Mon Jan 30 14:52:37 2017
 # --------------------------------------------------------
 
 import sys
-sys.path.append('../')
+sys.path.append('../../')
 
 import os
 import os.path as osp

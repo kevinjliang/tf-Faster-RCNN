@@ -5,5 +5,7 @@
 *__pycache__
 build/*
 Logs/*
+Data/data_clutter/*
 Data/MNIST/*
+Data/MNIST_data/*
 .ipynb_checkpoints

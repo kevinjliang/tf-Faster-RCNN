@@ -26,7 +26,6 @@ import random
 
 # Global Flag Dictionary
 flags = {
-    'data_directory': 'data/',
     'nums': [5000, 55000, 10000],
     'all_names': ["valid", "train", "test"],
     'num_classes': 10,
@@ -39,7 +38,7 @@ def main():
 
     # Parse Arguments
     parser = argparse.ArgumentParser(description='Clutter MNIST Arguments')
-    parser.add_argument('-d', '--dir', action="store", default='data_clutter/')
+    parser.add_argument('-d', '--dir', action="store", default='../data_clutter/')
     parser.add_argument('-i', '--dim', default=128)
     parser.add_argument('-t', '--test', default="PNG")
     args = vars(parser.parse_args())
@@ -121,12 +120,12 @@ def convert_test_png(test_data, test_labels, image_dim, data_directory):
         fname = 'img' + str(example_idx)
 
         # Save PNG, Annotation
-        imsave(data_directory + 'Images/' + fname + '.png', pixels)
-        np.savetxt(data_directory + 'Annotations/' + fname + '.txt', np.array(gt_box), fmt='%i')
+        imsave(data_directory + 'Test/Images/' + fname + '.png', pixels)
+        np.savetxt(data_directory + 'Test/Annotations/' + fname + '.txt', np.array([gt_box]), fmt='%i')
         filenames.append(fname)
 
     # Save List of Base Filenames in Names folder
-    names = open(data_directory + 'Names/names.txt', 'w')
+    names = open(data_directory + 'Test/Names/names.txt', 'w')
     for fname in filenames:
         names.write("%s\n" % fname)
 

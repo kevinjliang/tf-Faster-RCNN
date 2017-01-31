@@ -16,7 +16,7 @@ Functions for testing Faster RCNN net after it's been trained
 # --------------------------------------------------------
 
 import sys
-sys.path.append('../')
+sys.path.append('../../')
 
 from Lib.bbox_transform import bbox_transform_inv, clip_boxes
 from Lib.nms_wrapper import nms
