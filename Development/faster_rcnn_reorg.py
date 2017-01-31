@@ -66,9 +66,9 @@ class faster_rcnn_resnet101(Model):
         self.gt_boxes['TEST'] = tf.placeholder(tf.int32,[None,5])
         self.im_dims['TEST']  = tf.placeholder(tf.int32,[None,2])        
         
-        self.num_train_images = 55000
-        self.num_valid_images = 5000
-        self.num_test_images  = 10000
+        self.num_images = {'TRAIN': 55000,
+                           'VALID': 5000,
+                           'TEST' : 10000}
 
     def _summaries(self):
         ''' Define summaries for TensorBoard '''
@@ -154,7 +154,7 @@ class faster_rcnn_resnet101(Model):
     def train(self):
         """ Run training function. Save model upon completion """
         epochs = 0
-        iterations = int(np.ceil(self.num_train_images/self.flags['batch_size']) * self.flags['num_epochs'])
+        iterations = int(np.ceil(self.num_images['TRAIN']/self.flags['batch_size']) * self.flags['num_epochs'])
         self.print_log('Training for %d iterations' % iterations)
         for i in range(iterations):
             summary = self._run_train_iter()
@@ -163,7 +163,7 @@ class faster_rcnn_resnet101(Model):
                 bbox, cls = self.sess.run([self.fast_rcnn_net['TRAIN'].get_bbox_refinement(), self.fast_rcnn_net['TRAIN'].get_cls_score()])
                 print(bbox.shape)
                 print(cls.shape)
-            if self.step % (self.flags['num_epochs'] * self.num_train_images) == 0:
+            if self.step % (self.flags['num_epochs'] * self.num_images['TRAIN']) == 0:
                 self._save_model(section=epochs)
                 epochs += 1
             self._record_training_step(summary)
