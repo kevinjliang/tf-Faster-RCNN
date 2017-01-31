@@ -15,6 +15,7 @@ Modules:
 from tensorflow.examples.tutorials.mnist import input_data
 from tqdm import tqdm
 from scipy.ndimage.interpolation import zoom
+from scipy.misc import imsave
 
 import tensorflow as tf
 import numpy as np
@@ -26,11 +27,11 @@ import random
 # Global Flag Dictionary
 flags = {
     'data_directory': 'data/',
-    'nums': [5000, 10000, 55000],
-    'all_names': ["valid", "test", "train"],
+    'nums': [5000, 55000, 10000],
+    'all_names': ["valid", "train", "test"],
     'num_classes': 10,
-    'image_size': 128,
 }
+
 
 def main():
     """Downloads and Converts MNIST dataset to three .tfrecords files (train, valid, test)
@@ -39,13 +40,20 @@ def main():
     # Parse Arguments
     parser = argparse.ArgumentParser(description='Clutter MNIST Arguments')
     parser.add_argument('-d', '--dir', action="store", default='data_clutter/')
-    parser.add_argument('-i', '--dims', default=128)
+    parser.add_argument('-i', '--dim', default=128)
+    parser.add_argument('-t', '--test', default="PNG")
     args = vars(parser.parse_args())
 
     # Load and Convert Data
     all_data, all_labels = load_data()
     make_directory(args['dir'])
-    convert_tfrecords(all_data, all_labels, args['dims'], args['dir'])
+    if args['test'] != 'PNG':
+        print('Saving Test Set as TFRecords file.')
+        convert_tfrecords(all_data, all_labels, args['dim'], args['dir'])
+    else:
+        print('Saving Test Set as PNG and Text files.')
+        convert_tfrecords(all_data[:2], all_labels[:2], args['dim'], args['dir'])
+        convert_test_png(all_data[2], all_labels[2], args['dim'], args['dir'])
 
 
 def convert_tfrecords(all_data, all_labels, image_dim, data_directory):
@@ -84,6 +92,43 @@ def convert_tfrecords(all_data, all_labels, image_dim, data_directory):
         # Iterate over all examples and save each to .tfrecords file
         for idx in tqdm(range(len(examples))):
             write(examples[idx][0], examples[idx][1], examples[idx][2], writer)
+
+
+def convert_test_png(test_data, test_labels, image_dim, data_directory):
+    """
+    Converts Test Dataset into PNGs and saves them in a folder.
+    Annotations are saved in another folder in the same directory. All base filenames are saved into yet another folder,
+    again in the same directory.
+    :param test_data: list of test images
+    :param test_labels: list of test labels
+    :param image_dim: int, side of square image
+    :param data_directory: string, location of folders to be saved
+    """
+    # Make the 3 folders if they don't exist already
+    make_directory(data_directory + 'Test/Images/')
+    make_directory(data_directory + 'Test/Annotations/')
+    make_directory(data_directory + 'Test/Names')
+
+    filenames = list()
+
+    # Loop through all test data and save pngs in Images folder, text files in Annotations, a single text file in Names
+    for example_idx in tqdm(range(flags['nums'][2])):
+
+        # Generate pixels and ground truth bounding box and label
+        label_np = test_labels[example_idx].astype("int32")
+        label = label_np.tolist()
+        pixels, gt_box = generate_cluttered_digit(test_data[example_idx].reshape((28, 28)), image_dim, label, test_data)
+        fname = 'img' + str(example_idx)
+
+        # Save PNG, Annotation
+        imsave(data_directory + 'Images/' + fname + '.png', pixels)
+        np.savetxt(data_directory + 'Annotations/' + fname + '.txt', np.array(gt_box), fmt='%i')
+        filenames.append(fname)
+
+    # Save List of Base Filenames in Names folder
+    names = open(data_directory + 'Names/names.txt', 'w')
+    for fname in filenames:
+        names.write("%s\n" % fname)
 
 
 def write(pixels, gt_boxes, dims, writer):
@@ -171,8 +216,8 @@ def load_data():
     train_label = mnist.train.labels
     test_label = mnist.test.labels
     valid_label = mnist.validation.labels
-    all_data = [valid_data, test_data, train_data]
-    all_labels = [valid_label, test_label, train_label]
+    all_data = [valid_data, train_data, test_data]
+    all_labels = [valid_label, train_label, test_label]
     return all_data, all_labels
 
 
