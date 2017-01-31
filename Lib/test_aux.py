@@ -15,16 +15,15 @@ Functions for testing Faster RCNN net after it's been trained
 # Written by Ross Girshick
 # --------------------------------------------------------
 
-import sys
-sys.path.append('../../')
 
-from Lib.bbox_transform import bbox_transform_inv, clip_boxes
-from Lib.fast_rcnn_config import cfg
-from Lib.nms_wrapper import nms
+from .bbox_transform import bbox_transform_inv, clip_boxes
+from .fast_rcnn_config import cfg
+from .nms_wrapper import nms
+from .Datasets.eval_clutteredMNIST import cluttered_mnist_eval # Find a way to make this generalized
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.misc import imread
-import Pickle
+import pickle
 
     
 def _im_detect(sess, image, tf_inputs, tf_outputs):
@@ -144,11 +143,16 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
                 for j in range(1, num_classes):
                     keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                     all_boxes[j][i] = all_boxes[j][i][keep, :]
-
-        det_file = data_directory + 'Outputs/detections.pkl'
-        with open(det_file, 'wb') as f:
-            Pickle.dump(all_boxes, f)
-
+        
+    # Save detections
+    det_file = data_directory + 'Outputs/detections.pkl'
+    with open(det_file, 'wb') as f:
+        pickle.dump(all_boxes, f)
+    
+    class_metrics = cluttered_mnist_eval(all_boxes, data_directory)
+        
+    return class_metrics
+    
 #def _apply_nms(all_boxes, thresh):
 #    """
 #    Apply non-maximum suppression to all predicted boxes output by the
