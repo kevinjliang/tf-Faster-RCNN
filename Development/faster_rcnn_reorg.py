@@ -24,24 +24,22 @@ from Networks.faster_rcnn_networks import rpn, roi_proposal, fast_rcnn
 import numpy as np
 from scipy.misc import imread
 import tensorflow as tf
+import argparse
 
 # Global Dictionary of Flags
 flags = {
-    'data_directory': '../Data/',
+    'save_directory': '/home/dcs41/Documents/tf-Faster-RCNN/Development/',
     'model_directory': 'conv5/',
-    'save_directory': '../Logs/',
-    'restore': False,
     'batch_size': 1,
     'display_step': 200,
-    'num_epochs': 50,
     'num_classes': 11,   # 10 digits, +1 for background
     'anchor_scales': [1,2,3]
 }
 
 
-class faster_rcnn_resnet101(Model):
+class FasterRcnnConv5(Model):
     def __init__(self, flags_input, run_num):
-        super().__init__(flags_input, run_num, vram=0.3)
+        super().__init__(flags_input, run_num, vram=0.3, restore=2)
         self.print_log("Seed: %d" % flags['seed'])
         self.threads, self.coord = Data.init_threads(self.sess)
 
@@ -53,22 +51,22 @@ class faster_rcnn_resnet101(Model):
 
         # Train data
         file_train = '/home/dcs41/Documents/tf-Faster-RCNN/Data/data_clutter/clutter_mnist_train.tfrecords'
-        self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'] = Data.batch_inputs(self.read_and_decode, file_train,
-                                                                batch_size=self.flags['batch_size'])
-        
+        self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'] = Data.batch_inputs(self.read_and_decode,
+                                                                                           file_train, batch_size=
+                                                                                           self.flags['batch_size'])
         # Validation data
         file_valid = '/home/dcs41/Documents/tf-Faster-RCNN/Data/data_clutter/clutter_mnist_valid.tfrecords'
-        self.x['VALID'], self.gt_boxes['VALID'], self.im_dims['VALID']= Data.batch_inputs(self.read_and_decode, file_valid, mode="eval",
-                                                                batch_size=self.flags['batch_size'])
-        
+        self.x['VALID'], self.gt_boxes['VALID'], self.im_dims['VALID'] = Data.batch_inputs(self.read_and_decode,
+                                                                                           file_valid, mode="eval",
+                                                                                           batch_size=
+                                                                                           self.flags['batch_size'],
+                                                                                           num_threads=1, num_readers=1)
         # Test data
-        self.x['TEST']        = tf.placeholder(tf.float32,[None,128,128,1])
-        self.gt_boxes['TEST'] = tf.placeholder(tf.int32,[None,5])
-        self.im_dims['TEST']  = tf.placeholder(tf.int32,[None,2])        
+        self.x['TEST'] = tf.placeholder(tf.float32, [None, 128, 128, 1])
+        self.gt_boxes['TEST'] = tf.placeholder(tf.int32, [None, 5])
+        self.im_dims['TEST'] = tf.placeholder(tf.int32, [None, 2])
         
-        self.num_images = {'TRAIN': 55000,
-                           'VALID': 5000,
-                           'TEST' : 10000}
+        self.num_images = {'TRAIN': 55000, 'VALID': 5000, 'TEST': 10000}
 
     def _summaries(self):
         ''' Define summaries for TensorBoard '''
@@ -102,22 +100,21 @@ class faster_rcnn_resnet101(Model):
             self._faster_rcnn(self.x['TEST'], self.gt_boxes['TEST'], self.im_dims['TEST'], 'TEST')
 
     def _faster_rcnn(self, x, gt_boxes, im_dims, key):
-            # TODO: Switch to Layer convnet or resnet
-            self.cnn[key] = convnet(x, [5, 3, 3, 3, 3], [64, 96, 128, 172, 256], strides=[2, 2, 2, 2, 2])
-            featureMaps = self.cnn[key].get_output()
-            _feat_stride = self.cnn[key].get_feat_stride()
+        self.cnn[key] = convnet(x, [5, 3, 3, 3, 3], [64, 96, 128, 172, 256], strides=[2, 2, 2, 2, 2])
+        featureMaps = self.cnn[key].get_output()
+        _feat_stride = self.cnn[key].get_feat_stride()
 
-            # Region Proposal Network (RPN)
-            self.rpn_net[key] = rpn(featureMaps, gt_boxes, im_dims, _feat_stride, flags)
+        # Region Proposal Network (RPN)
+        self.rpn_net[key] = rpn(featureMaps, gt_boxes, im_dims, _feat_stride, flags)
 
-            # Roi Pooling
-            self.roi_proposal_net[key] = roi_proposal(self.rpn_net[key], gt_boxes, im_dims, key, flags)
+        # Roi Pooling
+        self.roi_proposal_net[key] = roi_proposal(self.rpn_net[key], gt_boxes, im_dims, key, flags)
 
-            # R-CNN Classification
-            self.fast_rcnn_net[key] = fast_rcnn(featureMaps, self.roi_proposal_net[key])
+        # R-CNN Classification
+        self.fast_rcnn_net[key] = fast_rcnn(featureMaps, self.roi_proposal_net[key])
             
     def _optimizer(self):
-        ''' Define losses and initialize optimizer '''
+        """ Define losses and initialize optimizer """
         # Losses (come from TRAIN networks)
         self.rpn_cls_loss = self.rpn_net['TRAIN'].get_rpn_cls_loss()
         self.rpn_bbox_loss = self.rpn_net['TRAIN'].get_rpn_bbox_loss()
@@ -125,7 +122,8 @@ class faster_rcnn_resnet101(Model):
         self.fast_rcnn_bbox_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_bbox_loss()
 
         # Total Loss
-        self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss + self.fast_rcnn_bbox_loss)
+        self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss +
+                                  self.fast_rcnn_bbox_loss)
 
         # Optimization operation
         self.optimizer = tf.train.AdamOptimizer().minimize(self.cost)
@@ -137,6 +135,7 @@ class faster_rcnn_resnet101(Model):
         for i in range(100):
             x, gt_boxes = self.sess.run([self.x['TRAIN'], self.gt_boxes['TRAIN']])
             print(i)
+
         # Plot an example
         faster_rcnn_tests.plot_img(x[0], gt_boxes[0])
         Data.exit_threads(threads, coord)  # Exit Queues
@@ -160,7 +159,8 @@ class faster_rcnn_resnet101(Model):
             summary = self._run_train_iter()
             if self.step % self.flags['display_step'] == 0:
                 self._record_train_metrics()
-                bbox, cls = self.sess.run([self.fast_rcnn_net['TRAIN'].get_bbox_refinement(), self.fast_rcnn_net['TRAIN'].get_cls_score()])
+                bbox, cls = self.sess.run([self.fast_rcnn_net['TRAIN'].get_bbox_refinement(),
+                                           self.fast_rcnn_net['TRAIN'].get_cls_score()])
                 print(bbox.shape)
                 print(cls.shape)
             if self.step % (self.flags['num_epochs'] * self.num_images['TRAIN']) == 0:
@@ -211,7 +211,33 @@ class faster_rcnn_resnet101(Model):
         
 def main():
     flags['seed'] = 1234
-    model = faster_rcnn_resnet101(flags, run_num=1)
+
+    # Parse Arguments
+    parser = argparse.ArgumentParser(description='Bayesian Ladder Networks Arguments')
+    parser.add_argument('-n', '--run_num', default=0)
+    parser.add_argument('-e', '--epochs', default=1)
+    parser.add_argument('-m', '--model_restore', default=1)
+    parser.add_argument('-r', '--restore', default=0)
+    parser.add_argument('-t', '--train', default=1)
+    parser.add_argument('-v', '--eval', default=1)
+    args = vars(parser.parse_args())
+
+    # Set Arguments
+    flags['num_epochs'] = int(args['epochs'])
+    flags['restore_num'] = int(args['model_restore'])
+    if args['restore'] == 0:
+        print('Not restoring')
+        flags['restore'] = False
+    else:
+        print('Restoring Model')
+        flags['restore'] = True
+        flags['restore_file'] = 'part_9.ckpt.meta'
+    model = FasterRcnnConv5(flags, run_num=int(args['run_num']))
+    if int(args['train']) == 1:
+        model.train()
+    if int(args['eval']) == 1:
+        model.test()
+    model.close()
     model.train()
 
 
