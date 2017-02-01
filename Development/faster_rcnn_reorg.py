@@ -41,8 +41,8 @@ flags = {
 
 
 class FasterRcnnConv5(Model):
-    def __init__(self, flags_input, run_num):
-        super().__init__(flags_input, run_num, vram=0.3, restore=flags_input['restore_num'])
+    def __init__(self, flags_input):
+        super().__init__(flags_input, flags_input['run_num'], vram=0.3, restore=flags_input['restore_num'])
         self.print_log("Seed: %d" % flags_input['seed'])
         self.threads, self.coord = Data.init_threads(self.sess)
 
@@ -214,19 +214,21 @@ def main():
     parser.add_argument('-r', '--restore', default=0)
     parser.add_argument('-t', '--train', default=1)
     parser.add_argument('-v', '--eval', default=1)
+    parser.add_argument('-f', '--file_epoch', default=1)
     args = vars(parser.parse_args())
 
     # Set Arguments
     flags['num_epochs'] = int(args['epochs'])
     flags['restore_num'] = int(args['model_restore'])
+    flags['run_num'] = int(args['run_num'])
     if args['restore'] == 0:
         print('Not restoring')
         flags['restore'] = False
     else:
         print('Restoring Model')
         flags['restore'] = True
-        flags['restore_file'] = 'part_0.ckpt.meta'
-    model = FasterRcnnConv5(flags, run_num=int(args['run_num']))
+        flags['restore_file'] = 'part_' + str(args['file_epoch']) + '.ckpt.meta'
+    model = FasterRcnnConv5(flags)
     if int(args['train']) == 1:
         model.train()
     if int(args['eval']) == 1:
