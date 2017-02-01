@@ -33,8 +33,8 @@ flags = {
     'batch_size': 1,
     'display_step': 200,
     'num_classes': 11,   # 10 digits, +1 for background
-    'classes': ('__background__','0','1','2','3','4','5','6','7','8','9'),
-    'anchor_scales': [1,2,3]
+    'classes': ('__background__', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'),
+    'anchor_scales': [1, 2, 3]
 }
 
 
@@ -70,7 +70,7 @@ class FasterRcnnConv5(Model):
         self.num_images = {'TRAIN': 55000, 'VALID': 5000, 'TEST': 10000}
 
     def _summaries(self):
-        ''' Define summaries for TensorBoard '''
+        """ Define summaries for TensorBoard """
         tf.summary.scalar("Total_Loss", self.cost)
         tf.summary.scalar("RPN_cls_Loss", self.rpn_cls_loss)
         tf.summary.scalar("RPN_bbox_Loss", self.rpn_bbox_loss)
@@ -79,7 +79,7 @@ class FasterRcnnConv5(Model):
         tf.summary.image("x_train", self.x['TRAIN'])
 
     def _network(self):
-        ''' Define the network outputs '''
+        """ Define the network outputs """
         # Initialize network dicts
         self.cnn = {}
         self.rpn_net = {}
@@ -162,8 +162,6 @@ class FasterRcnnConv5(Model):
                 self._record_train_metrics()
                 bbox, cls = self.sess.run([self.fast_rcnn_net['TRAIN'].get_bbox_refinement(),
                                            self.fast_rcnn_net['TRAIN'].get_cls_score()])
-                print(bbox.shape)
-                print(cls.shape)
             if self.step % (self.num_images['TRAIN']) == 0:  # save model every epoch
                 self._save_model(section=epochs)
                 epochs += 1
@@ -175,7 +173,7 @@ class FasterRcnnConv5(Model):
         """ Evaluate network on the test set. """
         data_info = (self.num_images['TEST'], flags['num_classes'], flags['classes'])
         
-        tf_inputs  = (self.x['TEST'], self.gt_boxes['TEST'], self.im_dims['TEST'])
+        tf_inputs = (self.x['TEST'], self.gt_boxes['TEST'], self.im_dims['TEST'])
         tf_outputs = (self.roi_proposal_net['TEST'].get_rois(), 
                       self.fast_rcnn_net['TEST'].get_cls_prob(), 
                       self.fast_rcnn_net['TEST'].get_bbox_refinement())
@@ -229,7 +227,7 @@ def main():
         model.train()
     if int(args['eval']) == 1:
         model.test()
-#    model.close()
+    model.close()
 
 
 if __name__ == "__main__":
