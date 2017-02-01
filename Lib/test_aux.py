@@ -152,7 +152,7 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
                 for j in range(1, num_classes):
                     keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                     all_boxes[j][i] = all_boxes[j][i][keep, :]
-        
+    
     # Save detections
     det_dir = data_directory + 'Outputs/'
     if not os.path.exists(det_dir):
