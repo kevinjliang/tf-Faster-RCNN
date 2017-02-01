@@ -27,7 +27,8 @@ import argparse
 
 # Global Dictionary of Flags
 flags = {
-    'save_directory': '/home/dcs41/Documents/tf-Faster-RCNN/Development/',
+    'data_directory': '../Data/data_clutter/',
+    'save_directory': '../Logs/',
     'model_directory': 'conv5/',
     'batch_size': 1,
     'display_step': 200,
@@ -50,12 +51,12 @@ class FasterRcnnConv5(Model):
         self.im_dims = {}        
 
         # Train data
-        file_train = '/home/dcs41/Documents/tf-Faster-RCNN/Data/data_clutter/clutter_mnist_train.tfrecords'
+        file_train = flags['data_directory'] + 'clutter_mnist_train.tfrecords'
         self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'] = Data.batch_inputs(self.read_and_decode,
                                                                                            file_train, batch_size=
                                                                                            self.flags['batch_size'])
         # Validation data
-        file_valid = '/home/dcs41/Documents/tf-Faster-RCNN/Data/data_clutter/clutter_mnist_valid.tfrecords'
+        file_valid = flags['data_directory'] + 'clutter_mnist_valid.tfrecords'
         self.x['VALID'], self.gt_boxes['VALID'], self.im_dims['VALID'] = Data.batch_inputs(self.read_and_decode,
                                                                                            file_valid, mode="eval",
                                                                                            batch_size=
@@ -161,8 +162,6 @@ class FasterRcnnConv5(Model):
                 self._record_train_metrics()
                 bbox, cls = self.sess.run([self.fast_rcnn_net['TRAIN'].get_bbox_refinement(),
                                            self.fast_rcnn_net['TRAIN'].get_cls_score()])
-                print(bbox.shape)
-                print(cls.shape)
             if self.step % (self.flags['num_epochs'] * self.num_images['TRAIN']) == 0:
                 self._save_model(section=epochs)
                 epochs += 1
@@ -170,16 +169,16 @@ class FasterRcnnConv5(Model):
             print(self.step)
         Data.exit_threads(self.threads, self.coord)  # Exit Queues
 
-    def test(self, data_directory): 
+    def test(self): 
         """ Evaluate network on the test set. """
         data_info = (self.num_images['TEST'], flags['num_classes'], flags['classes'])
         
-        tf_inputs  = (self.x['TEST'],self.im_dims['TEST'])
+        tf_inputs  = (self.x['TEST'], self.gt_boxes['TEST'], self.im_dims['TEST'])
         tf_outputs = (self.roi_proposal_net['TEST'].get_rois(), 
                       self.fast_rcnn_net['TEST'].get_cls_prob(), 
                       self.fast_rcnn_net['TEST'].get_bbox_refinement())
 
-        class_metrics = test_net(self.sess, data_directory, data_info, tf_inputs, tf_outputs)
+        class_metrics = test_net(self.sess, flags['data_directory'], data_info, tf_inputs, tf_outputs)
         print(class_metrics)
         
     @staticmethod
@@ -228,9 +227,7 @@ def main():
         model.train()
     if int(args['eval']) == 1:
         model.test()
-    model.close()
-#    model.train()
-    model.test()
+#    model.close()
 
 
 if __name__ == "__main__":
