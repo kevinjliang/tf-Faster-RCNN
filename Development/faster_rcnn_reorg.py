@@ -21,6 +21,8 @@ from Development.tests import faster_rcnn_tests
 from Networks.convnet import convnet
 from Networks.faster_rcnn_networks import rpn, roi_proposal, fast_rcnn
 
+from tqdm import tqdm
+
 import numpy as np
 import tensorflow as tf
 import argparse
@@ -156,7 +158,7 @@ class FasterRcnnConv5(Model):
         epochs = 0
         iterations = int(np.ceil(self.num_images['TRAIN']/self.flags['batch_size']) * self.flags['num_epochs'])
         self.print_log('Training for %d iterations' % iterations)
-        for i in range(iterations):
+        for i in tqdm(range(iterations)):
             summary = self._run_train_iter()
             if self.step % self.flags['display_step'] == 0:
                 self._record_train_metrics()
@@ -166,7 +168,6 @@ class FasterRcnnConv5(Model):
                 self._save_model(section=epochs)
                 epochs += 1
             self._record_training_step(summary)
-            print(self.step)
         Data.exit_threads(self.threads, self.coord)  # Exit Queues
 
     def test(self): 
