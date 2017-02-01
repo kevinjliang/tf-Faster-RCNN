@@ -50,20 +50,20 @@ def cluttered_mnist_eval(test_image_object, test_directory, ovthresh=0.5):
     :return: class_metrics: list, each index is a digit class which holds a tuple of rec, prec, and ap
     """
     # Get Ground Truth numbers for classes
-    total_num = np.zeros([10])
+    total_num = np.zeros([11])
     print('Loading Grouth Truth Data to count number of grouth truth per class')
     for x in tqdm(range(len(test_image_object[0]))):
         key = 'img' + str(x)
-        gt_boxes = np.loadtxt(test_directory + '/Annotations/' + key + '.txt')
+        gt_boxes = np.loadtxt(test_directory + 'Annotations/' + key + '.txt', ndmin=2)
         for g in range(gt_boxes.shape[0]):
-            label = gt_boxes[g, 4]
-            total_num[label] += 1
+            label = int(gt_boxes[g, 4])
+            total_num[label+1] += 1
 
     # Designate arrays to hold ap for each class
     class_metrics = list()
 
     # Calculate IoU for all classes and all images
-    for c in range(len(test_image_object)):  # loop through all classes
+    for c in range(len(test_image_object)):  # loop through all classes (skip background class)
         print('Now Calculating average precision for class: %d' % c)
         class_tp = list()
         class_fp = list()
@@ -79,14 +79,14 @@ def cluttered_mnist_eval(test_image_object, test_directory, ovthresh=0.5):
 
             # Get groundtruth
             key = 'img' + str(i)
-            gt_boxes = np.loadtxt(test_directory + '/Annotations/' + key + '.txt')
+            gt_boxes = np.loadtxt(test_directory + '/Annotations/' + key + '.txt', ndmin=2)
 
             bbgt = gt_boxes[:, :4]
             labels = gt_boxes[:, 4]
             labels_det = [False] * len(labels)
             ovmax = -np.inf  # In case no overlaps result
 
-            for d in range(image_dets):  # loop through all dets in a given image
+            for d in range(nd):  # loop through all dets in a given image
 
                 # Store particular dets as bb
                 bb = image_dets[d, :4]

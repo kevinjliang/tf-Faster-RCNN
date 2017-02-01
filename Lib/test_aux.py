@@ -15,16 +15,17 @@ Functions for testing Faster RCNN net after it's been trained
 # Written by Ross Girshick
 # --------------------------------------------------------
 
-import sys
-sys.path.append('../../')
 
-from Lib.bbox_transform import bbox_transform_inv, clip_boxes
-from Lib.fast_rcnn_config import cfg
-from Lib.nms_wrapper import nms
+from .bbox_transform import bbox_transform_inv, clip_boxes
+from .fast_rcnn_config import cfg
+from .nms_wrapper import nms
+from .Datasets.eval_clutteredMNIST import cluttered_mnist_eval # Find a way to make this generalized
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+import pickle
 from scipy.misc import imread
-import Pickle
+from tqdm import tqdm
 
     
 def _im_detect(sess, image, tf_inputs, tf_outputs):
@@ -35,14 +36,19 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
     image: Image to perform detection on. Should be numpy array    
     tf_inputs: TensorFlow tensor inputs to the computation graph
             [0] x: the image input
-            [1] im_dims: image dimensions of input
+            [1] gt_boxes: ground truth boxes (None for TEST)
+            [2] im_dims: image dimensions of input
     tf_outputs: TensorFlow tensor outputs of the computation graph
             [0] rois: RoIs produced by the RPN        
             [1] cls_prob: Classifier probabilities of each object by the RCNN
             [2] bbox_ref: Bounding box refinements by the RCNN 
     '''
+    image = image.reshape([1,image.shape[0],image.shape[1],1])
+    dummy_bbox = np.zeros((1,5))
+    im_shape = np.array(image.shape[1:3]).reshape([1,2])
+    
     # Graph Inputs for Detection
-    feed_dict = {tf_inputs[0]: image, tf_inputs[1]: image.shape}
+    feed_dict = {tf_inputs[0]: image, tf_inputs[1]: dummy_bbox, tf_inputs[2]: im_shape}
                  
     # Evaluate the graph
     rois, cls_prob, bbox_deltas = sess.run(tf_outputs, feed_dict)  
@@ -94,14 +100,15 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
             [2] classes: identities of each of the classes                
     tf_inputs: TensorFlow tensor inputs to the computation graph
             [0] x: the image input
-            [1] im_dims: image dimensions of input
+            [1] gt_boxes: ground truth boxes (None for TEST)
+            [2] im_dims: image dimensions of input
     tf_outputs: TensorFlow tensor outputs of the computation graph
             [0] rois: RoIs produced by the RPN        
             [1] cls_prob: Classifier probabilities of each object by the RCNN
             [2] bbox_ref: Bounding box refinements by the RCNN 
 
     """
-    num_images = data_info[0] 
+    num_images = data_info[0]
     num_classes = data_info[1]
     classes = data_info[2]
     # all detections are collected into:
@@ -110,11 +117,12 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
     all_boxes = [[[] for _ in range(num_images)]
                  for _ in range(num_classes)]
 
-    for i in range(num_images):
+    print('Detecting boxes in images:')
+    for i in tqdm(range(num_images)):
         # Read in file
-        im_file = data_directory + 'Test/Images/' + str(i) + '.png'
+        im_file = data_directory + 'Test/Images/img' + str(i) + '.png'
         image = imread(im_file)
-
+        
         # Perform Detection
         scores, boxes = _im_detect(sess, image, tf_inputs, tf_outputs)
         
@@ -144,11 +152,21 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
                 for j in range(1, num_classes):
                     keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                     all_boxes[j][i] = all_boxes[j][i][keep, :]
-
-        det_file = data_directory + 'Outputs/detections.pkl'
-        with open(det_file, 'wb') as f:
-            Pickle.dump(all_boxes, f)
-
+        
+    # Save detections
+    det_dir = data_directory + 'Outputs/'
+    if not os.path.exists(det_dir):
+        os.makedirs(det_dir)
+    
+    det_file = det_dir + 'detections.pkl'
+    with open(det_file, 'wb') as f:
+        pickle.dump(all_boxes, f)
+    
+    test_dir = data_directory + 'Test/'
+    class_metrics = cluttered_mnist_eval(all_boxes, test_dir)
+        
+    return class_metrics
+    
 #def _apply_nms(all_boxes, thresh):
 #    """
 #    Apply non-maximum suppression to all predicted boxes output by the
