@@ -39,7 +39,7 @@ flags = {
 
 class FasterRcnnConv5(Model):
     def __init__(self, flags_input, run_num):
-        super().__init__(flags_input, run_num, vram=0.3, restore=2)
+        super().__init__(flags_input, run_num, vram=0.3, restore=self.flags['restore_num'])
         self.print_log("Seed: %d" % flags['seed'])
         self.threads, self.coord = Data.init_threads(self.sess)
 
@@ -163,7 +163,7 @@ class FasterRcnnConv5(Model):
                                            self.fast_rcnn_net['TRAIN'].get_cls_score()])
                 print(bbox.shape)
                 print(cls.shape)
-            if self.step % (self.flags['num_epochs'] * self.num_images['TRAIN']) == 0:
+            if self.step % (self.num_images['TRAIN']) == 0:  # save model every epoch
                 self._save_model(section=epochs)
                 epochs += 1
             self._record_training_step(summary)
