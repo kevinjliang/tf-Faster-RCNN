@@ -23,7 +23,6 @@ from Networks.faster_rcnn_networks import rpn, roi_proposal, fast_rcnn
 
 from tqdm import tqdm
 
-from scipy.misc import imread
 import numpy as np
 import tensorflow as tf
 import argparse
@@ -60,7 +59,7 @@ class FasterRcnnConv5(Model):
                                                                                            self.flags['batch_size'])
         # Validation data. No GT Boxes necessary.
         file_valid = flags['data_directory'] + 'clutter_mnist_valid.tfrecords'
-        self.x['VALID'], _, self.im_dims['VALID'] = Data.batch_inputs(self.read_and_decode,
+        self.x['VALID'], _, self.im_dims['VALID']                      = Data.batch_inputs(self.read_and_decode,
                                                                                            file_valid, mode="eval",
                                                                                            batch_size=
                                                                                            self.flags['batch_size'],
@@ -95,26 +94,29 @@ class FasterRcnnConv5(Model):
         # Valid network => Uses same weights as train network
         with tf.variable_scope('model', reuse=True):
             assert tf.get_variable_scope().reuse is True
-            self._faster_rcnn(self.x['VALID'], self.gt_boxes['VALID'], self.im_dims['VALID'], 'VALID')
+            self._faster_rcnn(self.x['VALID'], None, self.im_dims['VALID'], 'VALID')
             
         # Test network => Uses same weights as train network
         with tf.variable_scope('model', reuse=True):
             assert tf.get_variable_scope().reuse is True
-            self._faster_rcnn(self.x['TEST'], self.gt_boxes['TEST'], self.im_dims['TEST'], 'TEST')
+            self._faster_rcnn(self.x['TEST'], None, self.im_dims['TEST'], 'TEST')
 
     def _faster_rcnn(self, x, gt_boxes, im_dims, key):
+        # VALID and TEST are both evaluation mode
+        eval_mode = True if (key == 'VALID' or key == 'TEST') else False
+        
         self.cnn[key] = convnet(x, [5, 3, 3, 3, 3], [64, 96, 128, 172, 256], strides=[2, 2, 2, 2, 2])
         featureMaps = self.cnn[key].get_output()
         _feat_stride = self.cnn[key].get_feat_stride()
 
         # Region Proposal Network (RPN)
-        self.rpn_net[key] = rpn(featureMaps, gt_boxes, im_dims, _feat_stride, flags)
+        self.rpn_net[key] = rpn(featureMaps, gt_boxes, im_dims, _feat_stride, eval_mode, flags)
 
         # Roi Pooling
-        self.roi_proposal_net[key] = roi_proposal(self.rpn_net[key], gt_boxes, im_dims, key, flags)
+        self.roi_proposal_net[key] = roi_proposal(self.rpn_net[key], gt_boxes, im_dims, eval_mode, flags)
 
         # R-CNN Classification
-        self.fast_rcnn_net[key] = fast_rcnn(featureMaps, self.roi_proposal_net[key])
+        self.fast_rcnn_net[key] = fast_rcnn(featureMaps, self.roi_proposal_net[key], eval_mode)
             
     def _optimizer(self):
         """ Define losses and initialize optimizer """
@@ -174,7 +176,7 @@ class FasterRcnnConv5(Model):
         """ Evaluate network on the test set. """
         data_info = (self.num_images['TEST'], flags['num_classes'], flags['classes'])
         
-        tf_inputs = (self.x['TEST'], self.gt_boxes['TEST'], self.im_dims['TEST'])
+        tf_inputs = (self.x['TEST'],  self.im_dims['TEST'])
         tf_outputs = (self.roi_proposal_net['TEST'].get_rois(), 
                       self.fast_rcnn_net['TEST'].get_cls_prob(), 
                       self.fast_rcnn_net['TEST'].get_bbox_refinement())

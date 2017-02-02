@@ -36,19 +36,17 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
     image: Image to perform detection on. Should be numpy array    
     tf_inputs: TensorFlow tensor inputs to the computation graph
             [0] x: the image input
-            [1] gt_boxes: ground truth boxes (None for TEST)
-            [2] im_dims: image dimensions of input
+            [1] im_dims: image dimensions of input
     tf_outputs: TensorFlow tensor outputs of the computation graph
             [0] rois: RoIs produced by the RPN        
             [1] cls_prob: Classifier probabilities of each object by the RCNN
             [2] bbox_ref: Bounding box refinements by the RCNN 
     '''
     image = image.reshape([1,image.shape[0],image.shape[1],1])
-    dummy_bbox = np.zeros((1,5))
     im_shape = np.array(image.shape[1:3]).reshape([1,2])
     
     # Graph Inputs for Detection
-    feed_dict = {tf_inputs[0]: image, tf_inputs[1]: dummy_bbox, tf_inputs[2]: im_shape}
+    feed_dict = {tf_inputs[0]: image, tf_inputs[1]: im_shape}
                  
     # Evaluate the graph
     rois, cls_prob, bbox_deltas = sess.run(tf_outputs, feed_dict)  
@@ -100,15 +98,14 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
             [2] classes: identities of each of the classes                
     tf_inputs: TensorFlow tensor inputs to the computation graph
             [0] x: the image input
-            [1] gt_boxes: ground truth boxes (None for TEST)
-            [2] im_dims: image dimensions of input
+            [1] im_dims: image dimensions of input
     tf_outputs: TensorFlow tensor outputs of the computation graph
             [0] rois: RoIs produced by the RPN        
             [1] cls_prob: Classifier probabilities of each object by the RCNN
             [2] bbox_ref: Bounding box refinements by the RCNN 
 
     """
-    num_images = data_info[0]
+    num_images = data_info[0]//200
     num_classes = data_info[1]
     classes = data_info[2]
     # all detections are collected into:

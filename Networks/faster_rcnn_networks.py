@@ -187,7 +187,7 @@ class fast_rcnn:
     def _network(self):
         with tf.variable_scope('fast_rcnn'):
             # No dropout in evaluation mode
-            keep_prob = 0.5 if self.eval_mode == False else 0
+            keep_prob = 0.5 if self.eval_mode == False else 1.0
             
             # ROI pooling
             pooledFeatures = roi_pool(self.featureMaps,self.rois,self.im_dims)
