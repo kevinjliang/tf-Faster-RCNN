@@ -31,16 +31,24 @@ class rpn:
     Region Proposal Network (RPN): From the convolutional feature maps 
     (TensorBase Layers object) of the last layer, generate bounding boxes 
     relative to anchor boxes and give an "objectness" score to each
+    
+    In evaluation mode (eval_mode==True), gt_boxes should be None.
     '''
-    def __init__(self,featureMaps,gt_boxes,im_dims,_feat_stride,flags):
+    def __init__(self, featureMaps, gt_boxes, im_dims, _feat_stride, eval_mode, flags):
         self.featureMaps = featureMaps
         self.gt_boxes = gt_boxes
         self.im_dims = im_dims
         self._feat_stride = _feat_stride
+        self.eval_mode = eval_mode
         self.flags = flags
         self._network()
         
     def _network(self):
+        # There shouldn't be any gt_boxes if in evaluation mode
+        if self.eval_mode == True:
+            assert self.gt_boxes == None, \
+            'Evaluation mode should not have ground truth boxes (or else what are you detecting for?)'
+        
         _num_anchors = len(self.flags['anchor_scales'])*3    
         
         rpn_layers = Layers(self.featureMaps)
@@ -54,11 +62,13 @@ class rpn:
             # Box-classification layer (objectness)
                 self.rpn_bbox_cls_layers = Layers(features)
                 self.rpn_bbox_cls_layers.conv2d(filter_size=1,output_channels=_num_anchors*2,activation_fn=None)        
-            
-                # Anchor Target Layer (anchors and deltas)
-                rpn_cls_score = self.rpn_bbox_cls_layers.get_output()
-                self.rpn_labels,self.rpn_bbox_targets,self.rpn_bbox_inside_weights,self.rpn_bbox_outside_weights = \
-                    anchor_target_layer(rpn_cls_score=rpn_cls_score,gt_boxes=self.gt_boxes,im_dims=self.im_dims,_feat_stride=self._feat_stride,anchor_scales=self.flags['anchor_scales'])       
+                
+                # Only calculate targets in train mode. No ground truth boxes in evaluation mode
+                if self.eval_mode == False:
+                    # Anchor Target Layer (anchors and deltas)
+                    rpn_cls_score = self.rpn_bbox_cls_layers.get_output()
+                    self.rpn_labels,self.rpn_bbox_targets,self.rpn_bbox_inside_weights,self.rpn_bbox_outside_weights = \
+                        anchor_target_layer(rpn_cls_score=rpn_cls_score,gt_boxes=self.gt_boxes,im_dims=self.im_dims,_feat_stride=self._feat_stride,anchor_scales=self.flags['anchor_scales'])       
             
             with tf.variable_scope('cls'):
             # Bounding-Box regression layer (bounding box predictions)
@@ -70,27 +80,34 @@ class rpn:
         return self.rpn_bbox_cls_layers.get_output()
 
     def get_rpn_labels(self):
+        assert self.eval_mode == False, 'No RPN labels without ground truth boxes'
         return self.rpn_labels
         
     def get_rpn_bbox_pred(self):
         return self.rpn_bbox_pred_layers.get_output()
         
     def get_rpn_bbox_targets(self):
+        assert self.eval_mode == False, 'No RPN bounding box targets without ground truth boxes'
         return self.rpn_bbox_targets
         
     def get_rpn_bbox_inside_weights(self):
+        # TODO: Might clobber this
+        assert self.eval_mode == False, 'No RPN inside weights without ground truth boxes'
         return self.rpn_bbox_inside_weights
         
     def get_rpn_bbox_outside_weights(self):
+        assert self.eval_mode == False, 'No RPN outside weights without ground truth boxes'
         return self.rpn_bbox_outside_weights
     
     # Loss functions
     def get_rpn_cls_loss(self):
+        assert self.eval_mode == False, 'No RPN cls loss without ground truth boxes'
         rpn_cls_score = self.get_rpn_cls_score()
         rpn_labels = self.get_rpn_labels()
         return rpn_cls_loss(rpn_cls_score,rpn_labels)
     
     def get_rpn_bbox_loss(self):
+        assert self.eval_mode == False, 'No RPN bbox loss without ground truth boxes'
         rpn_bbox_pred = self.get_rpn_bbox_pred()
         rpn_bbox_targets = self.get_rpn_bbox_targets()
         rpn_bbox_inside_weights = self.get_rpn_bbox_inside_weights()
@@ -100,42 +117,56 @@ class rpn:
 
 class roi_proposal:
     '''
-    Propose highest scoring boxes to the rcnn classifier
+    Propose highest scoring boxes to the RCNN classifier
+    
+    In evaluation mode (eval_mode==True), gt_boxes should be None.
     '''
-    def __init__(self,rpn_net,gt_boxes,im_dims,key,flags):
+    def __init__(self, rpn_net, gt_boxes, im_dims, eval_mode, flags):
         self.rpn_net = rpn_net
         self.rpn_cls_score = rpn_net.get_rpn_cls_score()
         self.rpn_bbox_pred = rpn_net.get_rpn_bbox_pred()
         self.gt_boxes = gt_boxes
         self.im_dims = im_dims
-        self.key = key
+        self.eval_mode = eval_mode
         self.flags = flags
         self._network()
         
     def _network(self):
+        # There shouldn't be any gt_boxes if in evaluation mode
+        if self.eval_mode == True:
+            assert self.gt_boxes == None, \
+            'Evaluation mode should not have ground truth boxes (or else what are you detecting for?)'
+        
         # Convert scores to probabilities
         self.rpn_cls_prob = rpn_softmax(self.rpn_cls_score)
         
         # Determine best proposals
-        blobs = proposal_layer(rpn_bbox_cls_prob=self.rpn_cls_prob, rpn_bbox_pred=self.rpn_bbox_pred, im_dims=self.im_dims, cfg_key=self.key, _feat_stride=self.rpn_net._feat_stride, anchor_scales=self.flags['anchor_scales'])
-    
-        # Calculate targets for proposals
-        self.rois, self.labels, self.bbox_targets, self.bbox_inside_weights, self.bbox_outside_weights = \
-            proposal_target_layer(rpn_rois=blobs, gt_boxes=self.gt_boxes,_num_classes=self.flags['num_classes'])
+        key = 'TRAIN' if self.eval_mode == False else 'TEST'
+        self.blobs = proposal_layer(rpn_bbox_cls_prob=self.rpn_cls_prob, rpn_bbox_pred=self.rpn_bbox_pred, im_dims=self.im_dims, cfg_key=key, _feat_stride=self.rpn_net._feat_stride, anchor_scales=self.flags['anchor_scales'])
+        
+        if self.eval_mode == False:
+            # Calculate targets for proposals
+            self.rois, self.labels, self.bbox_targets, self.bbox_inside_weights, self.bbox_outside_weights = \
+                proposal_target_layer(rpn_rois=self.blobs, gt_boxes=self.gt_boxes,_num_classes=self.flags['num_classes'])
     
     def get_rois(self):
-        return self.rois
+        return self.rois if self.eval_mode==False else self.blobs
         
     def get_labels(self):
+        assert self.eval_mode == False, 'No labels without ground truth boxes'
         return self.labels
         
     def get_bbox_targets(self):
+        assert self.eval_mode == False, 'No bounding box targets without ground truth boxes'
         return self.bbox_targets
         
     def get_bbox_inside_weights(self):
+        # TODO: Might clobber this
+        assert self.eval_mode == False, 'No RPN inside weights without ground truth boxes'
         return self.bbox_inside_weights
         
     def get_bbox_outside_weights(self):
+        assert self.eval_mode == False, 'No RPN outside weights without ground truth boxes'
         return self.bbox_outside_weights
         
     
@@ -144,16 +175,20 @@ class fast_rcnn:
     Crop and resize areas from the feature-extracting CNN's feature maps 
     according to the ROIs generated from the ROI proposal layer
     '''
-    def __init__(self,featureMaps, roi_proposal_net):
+    def __init__(self,featureMaps, roi_proposal_net, eval_mode):
         self.featureMaps = featureMaps
         self.roi_proposal_net = roi_proposal_net
         self.rois = roi_proposal_net.get_rois()
         self.im_dims = roi_proposal_net.im_dims
+        self.eval_mode = eval_mode
         self.flags = roi_proposal_net.flags
         self._network()
             
     def _network(self):
         with tf.variable_scope('fast_rcnn'):
+            # No dropout in evaluation mode
+            keep_prob = 0.5 if self.eval_mode == False else 0
+            
             # ROI pooling
             pooledFeatures = roi_pool(self.featureMaps,self.rois,self.im_dims)
             
@@ -161,8 +196,8 @@ class fast_rcnn:
             with tf.variable_scope('fc'):
                 self.rcnn_fc_layers = Layers(pooledFeatures)
                 self.rcnn_fc_layers.flatten()
-                self.rcnn_fc_layers.fc(output_nodes=4096, keep_prob=0.5)
-                self.rcnn_fc_layers.fc(output_nodes=4096, keep_prob=0.5)
+                self.rcnn_fc_layers.fc(output_nodes=4096, keep_prob=keep_prob)
+                self.rcnn_fc_layers.fc(output_nodes=4096, keep_prob=keep_prob)
                 
                 hidden = self.rcnn_fc_layers.get_output()
                 
@@ -189,11 +224,13 @@ class fast_rcnn:
         
     # Loss functions
     def get_fast_rcnn_cls_loss(self):
+        assert self.eval_mode == False, 'No Fast RCNN cls loss without ground truth boxes'
         fast_rcnn_cls_score = self.get_cls_score()
         labels = self.roi_proposal_net.get_labels()
         return fast_rcnn_cls_loss(fast_rcnn_cls_score, labels)
     
     def get_fast_rcnn_bbox_loss(self):
+        assert self.eval_mode == False, 'No Fast RCNN bbox loss without ground truth boxes'
         fast_rcnn_bbox_pred = self.get_bbox_refinement()
         bbox_targets = self.roi_proposal_net.get_bbox_targets()
         roi_inside_weights = self.roi_proposal_net.get_bbox_inside_weights()
