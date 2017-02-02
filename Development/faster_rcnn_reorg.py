@@ -23,6 +23,7 @@ from Networks.faster_rcnn_networks import rpn, roi_proposal, fast_rcnn
 
 from tqdm import tqdm
 
+from scipy.misc import imread
 import numpy as np
 import tensorflow as tf
 import argparse
@@ -41,8 +42,8 @@ flags = {
 
 
 class FasterRcnnConv5(Model):
-    def __init__(self, flags_input, run_num):
-        super().__init__(flags_input, run_num, vram=0.3, restore=flags_input['restore_num'])
+    def __init__(self, flags_input):
+        super().__init__(flags_input, flags_input['run_num'], vram=0.2, restore=flags_input['restore_num'])
         self.print_log("Seed: %d" % flags_input['seed'])
         self.threads, self.coord = Data.init_threads(self.sess)
 
@@ -57,16 +58,15 @@ class FasterRcnnConv5(Model):
         self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'] = Data.batch_inputs(self.read_and_decode,
                                                                                            file_train, batch_size=
                                                                                            self.flags['batch_size'])
-        # Validation data
+        # Validation data. No GT Boxes necessary.
         file_valid = flags['data_directory'] + 'clutter_mnist_valid.tfrecords'
-        self.x['VALID'], self.gt_boxes['VALID'], self.im_dims['VALID'] = Data.batch_inputs(self.read_and_decode,
+        self.x['VALID'], _, self.im_dims['VALID'] = Data.batch_inputs(self.read_and_decode,
                                                                                            file_valid, mode="eval",
                                                                                            batch_size=
                                                                                            self.flags['batch_size'],
                                                                                            num_threads=1, num_readers=1)
-        # Test data
+        # Test data. No GT Boxes.
         self.x['TEST'] = tf.placeholder(tf.float32, [None, 128, 128, 1])
-        self.gt_boxes['TEST'] = tf.placeholder(tf.int32, [None, 5])
         self.im_dims['TEST'] = tf.placeholder(tf.int32, [None, 2])
         
         self.num_images = {'TRAIN': 55000, 'VALID': 5000, 'TEST': 10000}
@@ -150,7 +150,7 @@ class FasterRcnnConv5(Model):
 
     def _record_train_metrics(self):
         """ Record training metrics """
-        loss = self.sess.run(self.cost)
+        loss, rois = self.sess.run([self.cost, self.roi_proposal_net['TRAIN'].get_rois()])
         self.print_log('Step %d: loss = %.6f' % (self.step, loss))
 
     def train(self):
@@ -214,19 +214,21 @@ def main():
     parser.add_argument('-r', '--restore', default=0)
     parser.add_argument('-t', '--train', default=1)
     parser.add_argument('-v', '--eval', default=1)
+    parser.add_argument('-f', '--file_epoch', default=1)
     args = vars(parser.parse_args())
 
     # Set Arguments
     flags['num_epochs'] = int(args['epochs'])
     flags['restore_num'] = int(args['model_restore'])
+    flags['run_num'] = int(args['run_num'])
     if args['restore'] == 0:
         print('Not restoring')
         flags['restore'] = False
     else:
         print('Restoring Model')
         flags['restore'] = True
-        flags['restore_file'] = 'part_0.ckpt.meta'
-    model = FasterRcnnConv5(flags, run_num=int(args['run_num']))
+        flags['restore_file'] = 'part_' + str(args['file_epoch']) + '.ckpt.meta'
+    model = FasterRcnnConv5(flags)
     if int(args['train']) == 1:
         model.train()
     if int(args['eval']) == 1:
