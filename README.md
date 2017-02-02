@@ -1,7 +1,7 @@
 # tf-Faster-RCNN: *Work in progress (both the code and this README)*
-A Python + TensorFlow implementation of Faster R-CNN ([paper](https://arxiv.org/abs/1506.01497)). See offical implementations here:
+A Python 3.5 + TensorFlow implementation of Faster R-CNN ([paper](https://arxiv.org/abs/1506.01497)). See official implementations here:
 - [Python + Caffe](https://github.com/rbgirshick/py-faster-rcnn)
-- [Matlab + Caffe](https://github.com/ShaoqingRen/faster_rcnn)
+- [MATLAB + Caffe](https://github.com/ShaoqingRen/faster_rcnn)
 
 The deep models in this implementation are built on [TensorBase](https://github.com/dancsalo/TensorBase), a minimalistic framework for end-to-end TensorFlow applications created by my good friend and collaborator Dan Salo. Check it out. [My personal fork](https://github.com/kevinjliang/TensorBase) (whose changes are typically regularly pulled into Dan's) is a submodule of this tf-Faster-RCNN repo.
 
