@@ -23,6 +23,7 @@ from Networks.faster_rcnn_networks import rpn, roi_proposal, fast_rcnn
 
 from tqdm import tqdm
 
+from scipy.misc import imread
 import numpy as np
 import tensorflow as tf
 import argparse
@@ -42,7 +43,7 @@ flags = {
 
 class FasterRcnnConv5(Model):
     def __init__(self, flags_input):
-        super().__init__(flags_input, flags_input['run_num'], vram=0.3, restore=flags_input['restore_num'])
+        super().__init__(flags_input, flags_input['run_num'], vram=0.2, restore=flags_input['restore_num'])
         self.print_log("Seed: %d" % flags_input['seed'])
         self.threads, self.coord = Data.init_threads(self.sess)
 
@@ -57,16 +58,15 @@ class FasterRcnnConv5(Model):
         self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'] = Data.batch_inputs(self.read_and_decode,
                                                                                            file_train, batch_size=
                                                                                            self.flags['batch_size'])
-        # Validation data
+        # Validation data. No GT Boxes necessary.
         file_valid = flags['data_directory'] + 'clutter_mnist_valid.tfrecords'
-        self.x['VALID'], self.gt_boxes['VALID'], self.im_dims['VALID'] = Data.batch_inputs(self.read_and_decode,
+        self.x['VALID'], _, self.im_dims['VALID'] = Data.batch_inputs(self.read_and_decode,
                                                                                            file_valid, mode="eval",
                                                                                            batch_size=
                                                                                            self.flags['batch_size'],
                                                                                            num_threads=1, num_readers=1)
-        # Test data
+        # Test data. No GT Boxes.
         self.x['TEST'] = tf.placeholder(tf.float32, [None, 128, 128, 1])
-        self.gt_boxes['TEST'] = tf.placeholder(tf.int32, [None, 5])
         self.im_dims['TEST'] = tf.placeholder(tf.int32, [None, 2])
         
         self.num_images = {'TRAIN': 55000, 'VALID': 5000, 'TEST': 10000}
@@ -150,7 +150,7 @@ class FasterRcnnConv5(Model):
 
     def _record_train_metrics(self):
         """ Record training metrics """
-        loss = self.sess.run(self.cost)
+        loss, rois = self.sess.run([self.cost, self.roi_proposal_net['TRAIN'].get_rois()])
         self.print_log('Step %d: loss = %.6f' % (self.step, loss))
 
     def train(self):
