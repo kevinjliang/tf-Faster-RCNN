@@ -175,6 +175,8 @@ def generate_cluttered_digit(input_image, image_dim, label, data):
     max_val = image_out.max()
 
     # Save Ground Truth Bounding boxes with Label in 4th position
+    if label == 0:  # Faster RCNN regards 0 as background, so change the label for all zeros to 10
+        label = 10
     gt_box = [x, y, x+w, y+h, label]
 
     # Add in total number of clutter patches
