@@ -59,25 +59,38 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
     pred_boxes = clip_boxes(pred_boxes, image.shape)
     
     return cls_prob, pred_boxes
-                 
-    
-def _vis_detections(image, class_name, dets, thresh=0.3):
+
+
+def vis_detections(im, class_name, gt_boxes, dets):
     """Visual debugging of detections."""
-    image = image[:, :, (2, 1, 0)]
+    import matplotlib
+    matplotlib.use('TkAgg')  # For Mac OS
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as patches
+    fig, ax = plt.subplots(1)
     for i in range(np.minimum(10, dets.shape[0])):
-        bbox = dets[i, :4]
-        score = dets[i, -1]
-        if score > thresh:
-            plt.cla()
-            plt.imshow(image)
-            plt.gca().add_patch(
-                plt.Rectangle((bbox[0], bbox[1]),
-                              bbox[2] - bbox[0],
-                              bbox[3] - bbox[1], fill=False,
-                              edgecolor='g', linewidth=3)
-                )
-            plt.title('{}  {:.3f}'.format(class_name, score))
-            plt.show()
+        bbox = dets[i, 1:]
+        ax.imshow(np.squeeze(im), cmap="gray")
+        plot_patch(ax, patches, bbox, gt=False)
+    plt.title(class_name)
+    plot_patch(ax, patches, gt_boxes[0][:4], gt=True)
+
+    # Display Final composite image
+    plt.show()
+
+
+def plot_patch(ax, patches, bbox, gt):
+    if gt is True:
+        color = 'g'
+    else:
+        color = 'r'
+    # Calculate Bounding Box Rectangle and plot it
+    width = bbox[3] - bbox[1]
+    height = bbox[2] - bbox[0]
+    rect = patches.Rectangle((bbox[1], bbox[0]), height, width, linewidth=2, edgecolor=color, facecolor='none',
+                             label='2')
+    ax.add_patch(rect)
+    ax.annotate('2', xy=(bbox[1], bbox[0]), xycoords='figure points')
 
 
 def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_image=300, thresh=0.05, vis=False):

@@ -14,9 +14,7 @@ import sys
 sys.path.append('../')
 
 from Lib.TensorBase.tensorbase.base import Model, Data
-from Lib.test_aux import test_net
-
-from Development.tests import faster_rcnn_tests
+from Lib.test_aux import test_net, vis_detections
 
 from Networks.convnet import convnet
 from Networks.faster_rcnn_networks import rpn, roi_proposal, fast_rcnn
@@ -29,12 +27,12 @@ import argparse
 
 # Global Dictionary of Flags
 flags = {
-    'data_directory': '../Data/data_clutter/',
-    'save_directory': '../Logs/',
-    'model_directory': 'conv5/',
+    'data_directory': '../Data/data_clutter/',  # Location of training/testing files
+    'save_directory': '../Logs/',  # Where to create model_directory folder
+    'model_directory': 'conv5/',  # Where to create 'Model[n]' folder
     'batch_size': 1,
-    'display_step': 200,
-    'num_classes': 11,   # 10 digits, +1 for background
+    'display_step': 200,  # How often to display loss
+    'num_classes': 11,  # 10 digits, +1 for background
     'classes': ('__background__', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'),
     'anchor_scales': [1, 2, 3]
 }
@@ -49,8 +47,8 @@ class FasterRcnnConv5(Model):
     def _data(self):
         # Initialize placeholder dicts
         self.x = {}
-        self.gt_boxes = {} 
-        self.im_dims = {}        
+        self.gt_boxes = {}
+        self.im_dims = {}
 
         # Train data
         file_train = flags['data_directory'] + 'clutter_mnist_train.tfrecords'
@@ -59,15 +57,15 @@ class FasterRcnnConv5(Model):
                                                                                            self.flags['batch_size'])
         # Validation data. No GT Boxes necessary.
         file_valid = flags['data_directory'] + 'clutter_mnist_valid.tfrecords'
-        self.x['VALID'], _, self.im_dims['VALID']                      = Data.batch_inputs(self.read_and_decode,
-                                                                                           file_valid, mode="eval",
-                                                                                           batch_size=
-                                                                                           self.flags['batch_size'],
-                                                                                           num_threads=1, num_readers=1)
+        self.x['VALID'], _, self.im_dims['VALID'] = Data.batch_inputs(self.read_and_decode,
+                                                                      file_valid, mode="eval",
+                                                                      batch_size=
+                                                                      self.flags['batch_size'],
+                                                                      num_threads=1, num_readers=1)
         # Test data. No GT Boxes.
         self.x['TEST'] = tf.placeholder(tf.float32, [None, 128, 128, 1])
         self.im_dims['TEST'] = tf.placeholder(tf.int32, [None, 2])
-        
+
         self.num_images = {'TRAIN': 55000, 'VALID': 5000, 'TEST': 10000}
 
     def _summaries(self):
@@ -86,7 +84,7 @@ class FasterRcnnConv5(Model):
         self.rpn_net = {}
         self.roi_proposal_net = {}
         self.fast_rcnn_net = {}
-        
+
         # Train network
         with tf.variable_scope('model'):
             self._faster_rcnn(self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'], 'TRAIN')
@@ -95,7 +93,7 @@ class FasterRcnnConv5(Model):
         with tf.variable_scope('model', reuse=True):
             assert tf.get_variable_scope().reuse is True
             self._faster_rcnn(self.x['VALID'], None, self.im_dims['VALID'], 'VALID')
-            
+
         # Test network => Uses same weights as train network
         with tf.variable_scope('model', reuse=True):
             assert tf.get_variable_scope().reuse is True
@@ -104,7 +102,7 @@ class FasterRcnnConv5(Model):
     def _faster_rcnn(self, x, gt_boxes, im_dims, key):
         # VALID and TEST are both evaluation mode
         eval_mode = True if (key == 'VALID' or key == 'TEST') else False
-        
+
         self.cnn[key] = convnet(x, [5, 3, 3, 3, 3], [64, 96, 128, 172, 256], strides=[2, 2, 2, 2, 2])
         featureMaps = self.cnn[key].get_output()
         _feat_stride = self.cnn[key].get_feat_stride()
@@ -117,7 +115,7 @@ class FasterRcnnConv5(Model):
 
         # R-CNN Classification
         self.fast_rcnn_net[key] = fast_rcnn(featureMaps, self.roi_proposal_net[key], eval_mode)
-            
+
     def _optimizer(self):
         """ Define losses and initialize optimizer """
         # Losses (come from TRAIN networks)
@@ -135,15 +133,15 @@ class FasterRcnnConv5(Model):
 
     def test_print_image(self):
         """ Read data through self.sess and plot out """
-        threads, coord = Data.init_threads(self.sess)  # Begin Queues
         print("Running 100 iterations of simple data transfer from queue to np.array")
         for i in range(100):
-            x, gt_boxes = self.sess.run([self.x['TRAIN'], self.gt_boxes['TRAIN']])
-            print(i)
-
-        # Plot an example
-        faster_rcnn_tests.plot_img(x[0], gt_boxes[0])
-        Data.exit_threads(threads, coord)  # Exit Queues
+            bboxes, cls_score, gt_boxes, image = self.sess.run([self.roi_proposal_net['TRAIN'].get_rois(),
+                                                                self.fast_rcnn_net['TRAIN'].get_cls_prob(),
+                                                                self.gt_boxes['TRAIN'], self.x['TRAIN']])
+            print(cls_score.shape)
+            print(np.argmax(cls_score, 1))
+            vis_detections(np.squeeze(image[0]), str(gt_boxes[0][4]), gt_boxes, bboxes)
+            print('Image Num: %d' % i)
 
     def _run_train_iter(self):
         """ Run training iteration"""
@@ -158,35 +156,33 @@ class FasterRcnnConv5(Model):
     def train(self):
         """ Run training function. Save model upon completion """
         epochs = 0
-        iterations = int(np.ceil(self.num_images['TRAIN']/self.flags['batch_size']) * self.flags['num_epochs'])
+        iterations = int(np.ceil(self.num_images['TRAIN'] / self.flags['batch_size']) * self.flags['num_epochs'])
         self.print_log('Training for %d iterations' % iterations)
         for i in tqdm(range(iterations)):
             summary = self._run_train_iter()
-            if self.step % self.flags['display_step'] == 0:
+            if self.step % (self.flags['display_step']) == 0:
                 self._record_train_metrics()
-                bbox, cls = self.sess.run([self.fast_rcnn_net['TRAIN'].get_bbox_refinement(),
-                                           self.fast_rcnn_net['TRAIN'].get_cls_score()])
-            if self.step % (self.num_images['TRAIN']) == 0:  # save model every epoch
-                self._save_model(section=epochs)
+            if self.step % (self.num_images['TRAIN']) == 0:  # save model every 5 epoch
+                if self.step % (self.num_images['TRAIN'] * 5) == 0:
+                    self._save_model(section=epochs)
                 epochs += 1
             self._record_training_step(summary)
-        Data.exit_threads(self.threads, self.coord)  # Exit Queues
 
-    def test(self): 
+    def test(self):
         """ Evaluate network on the test set. """
         data_info = (self.num_images['TEST'], flags['num_classes'], flags['classes'])
-        
-        tf_inputs = (self.x['TEST'],  self.im_dims['TEST'])
-        tf_outputs = (self.roi_proposal_net['TEST'].get_rois(), 
-                      self.fast_rcnn_net['TEST'].get_cls_prob(), 
+
+        tf_inputs = (self.x['TEST'], self.im_dims['TEST'])
+        tf_outputs = (self.roi_proposal_net['TEST'].get_rois(),
+                      self.fast_rcnn_net['TEST'].get_cls_prob(),
                       self.fast_rcnn_net['TEST'].get_bbox_refinement())
 
         class_metrics = test_net(self.sess, flags['data_directory'], data_info, tf_inputs, tf_outputs)
         print(class_metrics)
-        
+
     def close(self):
-        Data.exit_threads(self.threads,self.coord)
-        
+        Data.exit_threads(self.threads, self.coord)
+
     @staticmethod
     def read_and_decode(example_serialized):
         """ Read and decode binarized, raw MNIST dataset from .tfrecords file generated by clutterMNIST.py """
@@ -204,19 +200,19 @@ class FasterRcnnConv5(Model):
         image = tf.reshape(image, [128, 128, 1])
         return image, tf.cast(gt_boxes, tf.int32), tf.cast(dims, tf.int32)
 
-        
+
 def main():
     flags['seed'] = 1234
 
     # Parse Arguments
     parser = argparse.ArgumentParser(description='Bayesian Ladder Networks Arguments')
-    parser.add_argument('-n', '--run_num', default=0)
-    parser.add_argument('-e', '--epochs', default=1)
-    parser.add_argument('-m', '--model_restore', default=1)
-    parser.add_argument('-r', '--restore', default=0)
-    parser.add_argument('-t', '--train', default=1)
-    parser.add_argument('-v', '--eval', default=1)
-    parser.add_argument('-f', '--file_epoch', default=1)
+    parser.add_argument('-n', '--run_num', default=0)  # Saves all under /save_directory/model_directory/Model[n]
+    parser.add_argument('-e', '--epochs', default=1)  # Number of epochs for which to train the model
+    parser.add_argument('-m', '--model_restore', default=1)  # Restores from /save_directory/model_directory/Model[n]
+    parser.add_argument('-f', '--file_epoch', default=1)  # Restore filename: 'part_[f].ckpt.meta'
+    parser.add_argument('-r', '--restore', default=0)  # Binary to restore from a model. 0 = No restore.
+    parser.add_argument('-t', '--train', default=1)  # Binary to train model. 0 = No train.
+    parser.add_argument('-v', '--eval', default=1)  # Binary to evalulate model. 0 = No eval.
     args = vars(parser.parse_args())
 
     # Set Arguments
@@ -224,10 +220,8 @@ def main():
     flags['restore_num'] = int(args['model_restore'])
     flags['run_num'] = int(args['run_num'])
     if args['restore'] == 0:
-        print('Not restoring')
         flags['restore'] = False
     else:
-        print('Restoring Model')
         flags['restore'] = True
         flags['restore_file'] = 'part_' + str(args['file_epoch']) + '.ckpt.meta'
     model = FasterRcnnConv5(flags)
