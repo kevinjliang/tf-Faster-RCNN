@@ -58,6 +58,7 @@ class rpn:
             rpn_layers.conv2d(filter_size=3,output_channels=512)
             features = rpn_layers.get_output()
             
+            # TODO: the scopes on these two networks got reversed somehow
             with tf.variable_scope('bbox'):
             # Box-classification layer (objectness)
                 self.rpn_bbox_cls_layers = Layers(features)
@@ -70,6 +71,7 @@ class rpn:
                     self.rpn_labels,self.rpn_bbox_targets,self.rpn_bbox_inside_weights,self.rpn_bbox_outside_weights = \
                         anchor_target_layer(rpn_cls_score=rpn_cls_score,gt_boxes=self.gt_boxes,im_dims=self.im_dims,_feat_stride=self._feat_stride,anchor_scales=self.flags['anchor_scales'])       
             
+            # TODO: the scopes on these two networks got reversed somehow
             with tf.variable_scope('cls'):
             # Bounding-Box regression layer (bounding box predictions)
                 self.rpn_bbox_pred_layers = Layers(features)
