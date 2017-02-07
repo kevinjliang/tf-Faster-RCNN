@@ -58,12 +58,12 @@ class rpn:
             rpn_layers.conv2d(filter_size=3,output_channels=512)
             features = rpn_layers.get_output()
             
-            # TODO: the scopes on these two networks got reversed somehow
-            with tf.variable_scope('bbox'):
+            with tf.variable_scope('cls'):
             # Box-classification layer (objectness)
                 self.rpn_bbox_cls_layers = Layers(features)
                 self.rpn_bbox_cls_layers.conv2d(filter_size=1,output_channels=_num_anchors*2,activation_fn=None)        
                 
+            with tf.variable_scope('target'):
                 # Only calculate targets in train mode. No ground truth boxes in evaluation mode
                 if self.eval_mode == False:
                     # Anchor Target Layer (anchors and deltas)
@@ -71,8 +71,7 @@ class rpn:
                     self.rpn_labels,self.rpn_bbox_targets,self.rpn_bbox_inside_weights,self.rpn_bbox_outside_weights = \
                         anchor_target_layer(rpn_cls_score=rpn_cls_score,gt_boxes=self.gt_boxes,im_dims=self.im_dims,_feat_stride=self._feat_stride,anchor_scales=self.flags['anchor_scales'])       
             
-            # TODO: the scopes on these two networks got reversed somehow
-            with tf.variable_scope('cls'):
+            with tf.variable_scope('bbox'):
             # Bounding-Box regression layer (bounding box predictions)
                 self.rpn_bbox_pred_layers = Layers(features)
                 self.rpn_bbox_pred_layers.conv2d(filter_size=1,output_channels=_num_anchors*4,activation_fn=None)

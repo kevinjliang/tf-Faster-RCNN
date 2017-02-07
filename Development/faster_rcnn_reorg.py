@@ -33,7 +33,7 @@ flags = {
     'batch_size': 1,
     'display_step': 200,  # How often to display loss
     'num_classes': 11,  # 10 digits, +1 for background
-    'classes': ('__background__', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'),
+    'classes': ('__background__', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'),
     'anchor_scales': [1, 2, 3]
 }
 

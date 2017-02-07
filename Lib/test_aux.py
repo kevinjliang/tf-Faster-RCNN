@@ -149,7 +149,7 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
                 .astype(np.float32, copy=False)
             keep = nms(cls_dets, cfg.TEST.NMS)
             if vis:
-                _vis_detections(image, classes[j], cls_dets)
+                vis_detections(image, classes[j], cls_dets)
             all_boxes[j][i] = cls_dets
         if vis:
            plt.show()
