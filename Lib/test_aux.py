@@ -112,7 +112,7 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
             [0] x: the image input
             [1] im_dims: image dimensions of input
     tf_outputs: TensorFlow tensor outputs of the computation graph
-            [0] rois: RoIs produced by the RPN        
+            [0] rois: RoIs produced by the RPN
             [1] cls_prob: Classifier probabilities of each object by the RCNN
             [2] bbox_ref: Bounding box refinements by the RCNN 
 
@@ -161,7 +161,8 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
                 for j in range(1, num_classes):
                     keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                     all_boxes[j][i] = all_boxes[j][i][keep, :]
-    
+
+
     # Save detections
     det_dir = data_directory + 'Outputs/'
     if not os.path.exists(det_dir):
