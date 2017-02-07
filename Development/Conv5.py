@@ -4,16 +4,14 @@ Created on Sat Dec 31 13:22:36 2016
 
 @author: Kevin Liang
 
-Faster R-CNN model using ResNet as the convolutional feature extractor
-
-Reorganizing a few things relative to faster_rcnn_conv5
+Just a CNN
 """
 
 import sys
 
 sys.path.append('../')
 
-from Lib.TensorBase.tensorbase.base import Model, Data
+from Lib.TensorBase.tensorbase.base import Model, Data, Layers
 from Lib.test_aux import test_net, vis_detections
 
 from Networks.convnet import convnet
@@ -29,16 +27,16 @@ import argparse
 flags = {
     'data_directory': '../Data/data_clutter/',  # Location of training/testing files
     'save_directory': '../Logs/',  # Where to create model_directory folder
-    'model_directory': 'conv5/',  # Where to create 'Model[n]' folder
-    'batch_size': 1,
-    'display_step': 20,  # How often to display loss
+    'model_directory': 'conv5_actually/',  # Where to create 'Model[n]' folder
+    'batch_size': 64,
+    'display_step': 200,  # How often to display loss
     'num_classes': 11,  # 10 digits, +1 for background
     'classes': ('__background__', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'),
     'anchor_scales': [1, 2, 3]
 }
 
 
-class FasterRcnnConv5(Model):
+class Conv5(Model):
     def __init__(self, flags_input):
         super().__init__(flags_input, flags_input['run_num'], vram=0.2, restore=flags_input['restore_num'])
         self.print_log("Seed: %d" % flags_input['seed'])
@@ -71,77 +69,52 @@ class FasterRcnnConv5(Model):
     def _summaries(self):
         """ Define summaries for TensorBoard """
         tf.summary.scalar("Total_Loss", self.cost)
-        tf.summary.scalar("RPN_cls_Loss", self.rpn_cls_loss)
-        tf.summary.scalar("RPN_bbox_Loss", self.rpn_bbox_loss)
-        tf.summary.scalar("Fast_RCNN_Cls_Loss", self.fast_rcnn_cls_loss)
-        tf.summary.scalar("Fast_RCNN_Bbox_Loss", self.fast_rcnn_bbox_loss)
-        tf.summary.image("x_train", self.x['TRAIN'])
-
+        tf.summary.image("x_train", self.x['TRAIN'])      
+        
     def _network(self):
         """ Define the network outputs """
         # Initialize network dicts
         self.cnn = {}
-        self.rpn_net = {}
-        self.roi_proposal_net = {}
-        self.fast_rcnn_net = {}
+        self.logits = {}
 
         # Train network
         with tf.variable_scope('model'):
-            self._faster_rcnn(self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'], 'TRAIN')
+            self._cnn(self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'], 'TRAIN')
 
         # Valid network => Uses same weights as train network
         with tf.variable_scope('model', reuse=True):
             assert tf.get_variable_scope().reuse is True
-            self._faster_rcnn(self.x['VALID'], None, self.im_dims['VALID'], 'VALID')
+            self._cnn(self.x['VALID'], None, self.im_dims['VALID'], 'VALID')
 
         # Test network => Uses same weights as train network
         with tf.variable_scope('model', reuse=True):
             assert tf.get_variable_scope().reuse is True
-            self._faster_rcnn(self.x['TEST'], None, self.im_dims['TEST'], 'TEST')
+            self._cnn(self.x['TEST'], None, self.im_dims['TEST'], 'TEST')
 
-    def _faster_rcnn(self, x, gt_boxes, im_dims, key):
-        # VALID and TEST are both evaluation mode
-        eval_mode = True if (key == 'VALID' or key == 'TEST') else False
-
-        self.cnn[key] = convnet(x, [5, 3, 3, 3, 3], [32, 64, 64, 128, 128], strides=[2, 2, 1, 2, 1])
-        featureMaps = self.cnn[key].get_output()
-        _feat_stride = self.cnn[key].get_feat_stride()
-
-        # Region Proposal Network (RPN)
-        self.rpn_net[key] = rpn(featureMaps, gt_boxes, im_dims, _feat_stride, eval_mode, flags)
-
-        # Roi Pooling
-        self.roi_proposal_net[key] = roi_proposal(self.rpn_net[key], gt_boxes, im_dims, eval_mode, flags)
-
-        # R-CNN Classification
-        self.fast_rcnn_net[key] = fast_rcnn(featureMaps, self.roi_proposal_net[key], eval_mode)
+    def _cnn(self, x, gt_boxes, im_dims, key):
+#        self.cnn[key] = convnet(x, [5, 3, 3, 3, 3], [32, 64, 64, 128, 128], strides=[2, 2, 1, 2, 1])
+        self.cnn[key] = Layers(x)
+        self.cnn[key].conv2d(5, 32)
+        self.cnn[key].maxpool()
+        self.cnn[key].conv2d(3, 64)
+        self.cnn[key].maxpool()
+        self.cnn[key].conv2d(3, 64)
+        self.cnn[key].conv2d(3, 128)
+        self.cnn[key].maxpool()
+        self.cnn[key].conv2d(3, 128)
+        self.cnn[key].flatten()
+        self.cnn[key].fc(512)
+        self.cnn[key].fc(11,activation_fn = None)
+        self.logits[key] = self.cnn[key].get_output()
 
     def _optimizer(self):
         """ Define losses and initialize optimizer """
         # Losses (come from TRAIN networks)
-        self.rpn_cls_loss = self.rpn_net['TRAIN'].get_rpn_cls_loss()
-        self.rpn_bbox_loss = self.rpn_net['TRAIN'].get_rpn_bbox_loss()
-        self.fast_rcnn_cls_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_cls_loss()
-        self.fast_rcnn_bbox_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_bbox_loss()
-
-        # Total Loss
-        self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss +
-                                  self.fast_rcnn_bbox_loss)
+        self.label = self.gt_boxes['TRAIN'][:,4]
+        self.cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(self.logits['TRAIN'], self.label))
 
         # Optimization operation
         self.optimizer = tf.train.AdamOptimizer().minimize(self.cost)
-
-    def test_print_image(self):
-        """ Read data through self.sess and plot out """
-        print("Running 100 iterations of simple data transfer from queue to np.array")
-        for i in range(100):
-            bboxes, cls_score, gt_boxes, image = self.sess.run([self.roi_proposal_net['TRAIN'].get_rois(),
-                                                                self.fast_rcnn_net['TRAIN'].get_cls_prob(),
-                                                                self.gt_boxes['TRAIN'], self.x['TRAIN']])
-            print(cls_score.shape)
-            print(np.argmax(cls_score, 1))
-            vis_detections(np.squeeze(image[0]), str(gt_boxes[0][4]), gt_boxes, bboxes)
-            print('Image Num: %d' % i)
 
     def _run_train_iter(self):
         """ Run training iteration"""
@@ -150,8 +123,12 @@ class FasterRcnnConv5(Model):
 
     def _record_train_metrics(self):
         """ Record training metrics """
-        loss, rois = self.sess.run([self.cost, self.roi_proposal_net['TRAIN'].get_rois()])
+        loss,logits = self.sess.run([self.cost,self.logits['TRAIN']])
         self.print_log('Step %d: loss = %.6f' % (self.step, loss))
+        print('Class predictions:')
+        print(np.argmax(logits, 1))
+        print('Max value of logits:')
+        print(np.max(logits))
 
     def train(self):
         """ Run training function. Save model upon completion """
@@ -161,16 +138,23 @@ class FasterRcnnConv5(Model):
         for i in tqdm(range(iterations)):
             summary = self._run_train_iter()
             if self.step % (self.flags['display_step']) == 0:
-                cls_score, lab = self.sess.run([self.fast_rcnn_net['TRAIN'].get_cls_score(), self.roi_proposal_net['TRAIN'].get_labels()])
-                np.set_printoptions(precision=2)
-                print(cls_score)
-                print(lab)
                 self._record_train_metrics()
             if self.step % (self.num_images['TRAIN']) == 0:  # save model every 5 epoch
                 if self.step % (self.num_images['TRAIN'] * 2) == 0:
                     self._save_model(section=epochs)
                 epochs += 1
             self._record_training_step(summary)
+            
+    def valid(self):
+        results = list()
+        iterations = self.num_valid_images
+        print('Now validating the model for accuracy...')
+        for i in tqdm(range(iterations)):
+            preds, true = self.sess.run([self.logits['VALID'], self.gt_boxes['VALID'][:,4]])
+            correct_prediction = np.equal(np.argmax(preds, 1), true)
+            results = np.concatenate((results, correct_prediction))
+        print('Accuracy on Valid set: %f' % np.mean(results))
+
 
     def test(self):
         """ Evaluate network on the test set. """
@@ -228,11 +212,11 @@ def main():
     else:
         flags['restore'] = True
         flags['restore_file'] = 'part_' + str(args['file_epoch']) + '.ckpt.meta'
-    model = FasterRcnnConv5(flags)
+    model = Conv5(flags)
     if int(args['train']) == 1:
         model.train()
     if int(args['eval']) == 1:
-        model.test()
+        model.valid()
     model.close()
 
 

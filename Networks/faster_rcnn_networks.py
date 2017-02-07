@@ -55,7 +55,8 @@ class rpn:
         
         with tf.variable_scope('rpn'):
             # Spatial windowing
-            rpn_layers.conv2d(filter_size=3,output_channels=512)
+#            rpn_layers.conv2d(filter_size=3,output_channels=512)
+            rpn_layers.conv2d(filter_size=3,output_channels=128)
             features = rpn_layers.get_output()
             
             with tf.variable_scope('cls'):
@@ -197,8 +198,10 @@ class fast_rcnn:
             with tf.variable_scope('fc'):
                 self.rcnn_fc_layers = Layers(pooledFeatures)
                 self.rcnn_fc_layers.flatten()
-                self.rcnn_fc_layers.fc(output_nodes=4096, keep_prob=keep_prob)
-                self.rcnn_fc_layers.fc(output_nodes=4096, keep_prob=keep_prob)
+#                self.rcnn_fc_layers.fc(output_nodes=4096, keep_prob=keep_prob)
+#                self.rcnn_fc_layers.fc(output_nodes=4096, keep_prob=keep_prob)
+                self.rcnn_fc_layers.fc(output_nodes=1024, keep_prob=keep_prob)
+                self.rcnn_fc_layers.fc(output_nodes=1024, keep_prob=keep_prob)
                 
                 hidden = self.rcnn_fc_layers.get_output()
                 
