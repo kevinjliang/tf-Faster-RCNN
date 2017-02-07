@@ -20,6 +20,7 @@ from .bbox_transform import bbox_transform_inv, clip_boxes
 from .fast_rcnn_config import cfg
 from .nms_wrapper import nms
 from .Datasets.eval_clutteredMNIST import cluttered_mnist_eval # Find a way to make this generalized
+import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -52,7 +53,7 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
     rois, cls_prob, bbox_deltas = sess.run(tf_outputs, feed_dict)  
     
     # Bounding boxes proposed by Faster RCNN
-    boxes = rois[:,1:]
+    boxes = rois[:, 1:]
 
     # Apply bounding box regression to Faster RCNN proposed boxes
     pred_boxes = bbox_transform_inv(boxes, bbox_deltas)
@@ -78,19 +79,17 @@ def vis_detections(im, class_name, gt_boxes, dets):
     # Display Final composite image
     plt.show()
 
-
 def plot_patch(ax, patches, bbox, gt):
     if gt is True:
         color = 'g'
     else:
         color = 'r'
     # Calculate Bounding Box Rectangle and plot it
-    width = bbox[3] - bbox[1]
-    height = bbox[2] - bbox[0]
-    rect = patches.Rectangle((bbox[1], bbox[0]), height, width, linewidth=2, edgecolor=color, facecolor='none',
-                             label='2')
+    height = bbox[3] - bbox[1]
+    width = bbox[2] - bbox[0]
+    rect = patches.Rectangle((bbox[0], bbox[1]), width, height, linewidth=2, edgecolor=color, facecolor='none')
     ax.add_patch(rect)
-    ax.annotate('2', xy=(bbox[1], bbox[0]), xycoords='figure points')
+    ax.annotate('2', xy=(bbox[0], bbox[1]), xycoords='figure points')
 
 
 def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_image=300, thresh=0.05, vis=False):

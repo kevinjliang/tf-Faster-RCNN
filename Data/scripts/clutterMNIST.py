@@ -167,11 +167,11 @@ def generate_cluttered_digit(input_image, image_dim, label, data):
     digit = zoom(input_image, (h/28, w/28))
 
     # Randomly choose location in image_out and save in bbox list
-    x = np.random.randint(low=0, high=image_dim - h)
-    y = np.random.randint(low=0, high=image_dim - w)
+    x = np.random.randint(low=0, high=image_dim - w)
+    y = np.random.randint(low=0, high=image_dim - h)
 
     # Insert digit into image_out and get max
-    image_out[x:x + h, y:y + w] += digit
+    image_out[y:y + h, x:x + w] += digit
     max_val = image_out.max()
 
     # Save Ground Truth Bounding boxes with Label in 4th position

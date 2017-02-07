@@ -28,9 +28,7 @@ def roi_pool(featureMaps,rois,im_dims):
     boxes = rois[:,1:]
     normalization = tf.cast(tf.pack([im_dims[:,1],im_dims[:,0],im_dims[:,1],im_dims[:,0]],axis=1),dtype=tf.float32)
     boxes = tf.div(boxes,normalization)
-    # TF Documentation might have coordinate order wrong. See IPython notebook at:
-    # https://github.com/kevinjliang/tf-Faster-RCNN/blob/master/Development/test_faster_rcnn_networks.ipynb
-    boxes = tf.pack([boxes[:,0],boxes[:,1],boxes[:,2],boxes[:,3]],axis=1)
+    boxes = tf.pack([boxes[:,1],boxes[:,0],boxes[:,3],boxes[:,2]],axis=1)  # y1, x1, y2, x2
     
     # ROI pool output size
     crop_size = tf.constant([14,14])
