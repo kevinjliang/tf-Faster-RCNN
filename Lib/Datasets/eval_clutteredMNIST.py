@@ -127,7 +127,6 @@ def cluttered_mnist_eval(test_image_object, test_directory, num_images, ovthresh
         fp = np.cumsum(class_fp)
         tp = np.cumsum(class_tp)
         rec = tp / float(total_num[c])
-        print(rec)
 
         # avoid divide by zero in case the first detection matches a difficult
         # ground truth
