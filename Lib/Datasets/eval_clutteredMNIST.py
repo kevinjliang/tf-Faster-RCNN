@@ -50,7 +50,7 @@ def cluttered_mnist_eval(test_image_object, test_directory, num_images, ovthresh
     :return: class_metrics: list, each index is a digit class which holds a tuple of rec, prec, and ap
     """
     # Get Ground Truth numbers for classes
-    total_num = np.zeros([1])
+    total_num = np.zeros([11])
     print('Loading Grouth Truth Data to count number of grouth truth per class')
     for x in tqdm(range(num_images)):  # number of test data
         key = 'img' + str(x)
