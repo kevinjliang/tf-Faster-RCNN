@@ -41,7 +41,7 @@ def voc_ap(rec, prec):
     return ap
 
 
-def cluttered_mnist_eval(test_image_object, test_directory, ovthresh=0.5):
+def cluttered_mnist_eval(test_image_object, test_directory, num_images, ovthresh=0.5):
     """
     Evalulates predicted detections on cluttered MNIST dataset
     :param test_image_object: array, obj[cls][image] = N x 5 [x1, y1, x2, y2, cls_score]
@@ -50,20 +50,20 @@ def cluttered_mnist_eval(test_image_object, test_directory, ovthresh=0.5):
     :return: class_metrics: list, each index is a digit class which holds a tuple of rec, prec, and ap
     """
     # Get Ground Truth numbers for classes
-    total_num = np.zeros([11])
+    total_num = np.zeros([1])
     print('Loading Grouth Truth Data to count number of grouth truth per class')
-    for x in tqdm(range(len(test_image_object[0]))):
+    for x in tqdm(range(num_images)):  # number of test data
         key = 'img' + str(x)
         gt_boxes = np.loadtxt(test_directory + 'Annotations/' + key + '.txt', ndmin=2)
         for g in range(gt_boxes.shape[0]):
             label = int(gt_boxes[g, 4])
-            total_num[label+1] += 1
+            total_num[label] += 1
 
     # Designate arrays to hold ap for each class
     class_metrics = list()
 
     # Calculate IoU for all classes and all images
-    for c in range(len(test_image_object)):  # loop through all classes (skip background class)
+    for c in range(1, len(test_image_object)):  # loop through all classes (skip background class)
         print('Now Calculating average precision for class: %d' % c)
         class_tp = list()
         class_fp = list()
@@ -120,19 +120,19 @@ def cluttered_mnist_eval(test_image_object, test_directory, ovthresh=0.5):
                     fp[d] = 1.
 
             # Add scores from all dets in one image to the class true positives and false positives
-            class_tp.append(tp)
-            class_fp.append(fp)
+            class_tp.extend(tp)
+            class_fp.extend(fp)
 
         # compute precision recall
         fp = np.cumsum(class_fp)
         tp = np.cumsum(class_tp)
         rec = tp / float(total_num[c])
+        print(rec)
 
         # avoid divide by zero in case the first detection matches a difficult
         # ground truth
         prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
         ap = voc_ap(rec, prec)
-        class_metrics.append((rec, prec, ap))
-
-    print('Finished Calculating average precisions.')
+        class_metrics.append(ap)
+    print('Mean Average Precision: %f' % np.mean(class_metrics))
     return class_metrics

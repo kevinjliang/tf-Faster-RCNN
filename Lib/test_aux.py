@@ -57,7 +57,7 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
 
     # Apply bounding box regression to Faster RCNN proposed boxes
     pred_boxes = bbox_transform_inv(boxes, bbox_deltas)
-    pred_boxes = clip_boxes(pred_boxes, image.shape)
+    #pred_boxes = clip_boxes(pred_boxes, image.shape) .... TODO: fix this box. spits out garbage.
     
     return cls_prob, pred_boxes
 
@@ -117,7 +117,7 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
             [2] bbox_ref: Bounding box refinements by the RCNN 
 
     """
-    num_images = data_info[0]//200
+    num_images = data_info[0]//20
     num_classes = data_info[1]
     classes = data_info[2]
     # all detections are collected into:
@@ -173,7 +173,7 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
         pickle.dump(all_boxes, f)
     
     test_dir = data_directory + 'Test/'
-    class_metrics = cluttered_mnist_eval(all_boxes, test_dir)
+    class_metrics = cluttered_mnist_eval(all_boxes, test_dir, num_images)
         
     return class_metrics
     

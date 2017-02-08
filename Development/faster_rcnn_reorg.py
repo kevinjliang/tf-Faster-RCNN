@@ -13,7 +13,7 @@ import sys
 
 sys.path.append('../')
 
-from Lib.TensorBase.tensorbase.base import Model, Data
+from Lib.TensorBase.tensorbase.base import Model, Data, Layers
 from Lib.test_aux import test_net, vis_detections
 
 from Networks.convnet import convnet
@@ -125,11 +125,21 @@ class FasterRcnnConv5(Model):
         self.fast_rcnn_bbox_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_bbox_loss()
 
         # Total Loss
-        self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss +
-                                  self.fast_rcnn_bbox_loss)
+        self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + 100 * self.fast_rcnn_cls_loss)
 
         # Optimization operation
-        self.optimizer = tf.train.AdamOptimizer().minimize(self.cost)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(self.cost)
+
+        # Classifcation Objective
+        if self.flags['restore'] is False:
+            class_model = Layers(self.cnn['TRAIN'].get_output())
+            class_model.flatten()
+            class_model.fc(1024)
+            class_model.fc(11, activation_fn=None)
+            self.class_cost = tf.nn.sparse_softmax_cross_entropy_with_logits(class_model.get_output(),
+                                                                            self.gt_boxes['TRAIN'][:, 4])
+
+            self.optimizer_class = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(self.class_cost)
 
     def test_print_image(self):
         """ Read data through self.sess and plot out """
@@ -143,6 +153,11 @@ class FasterRcnnConv5(Model):
             vis_detections(np.squeeze(image[0]), str(gt_boxes[0][4]), gt_boxes, bboxes)
             print('Image Num: %d' % i)
 
+    def _run_train_class_iter(self):
+        """ Run training iteration"""
+        loss, _ = self.sess.run([self.class_cost, self.optimizer_class])
+        return loss
+
     def _run_train_iter(self):
         """ Run training iteration"""
         summary, _ = self.sess.run([self.merged, self.optimizer])
@@ -150,8 +165,21 @@ class FasterRcnnConv5(Model):
 
     def _record_train_metrics(self):
         """ Record training metrics """
-        loss, rois = self.sess.run([self.cost, self.roi_proposal_net['TRAIN'].get_rois()])
+        loss, cls_score, lab, loss_clss = self.sess.run([self.cost, self.fast_rcnn_net['TRAIN'].get_cls_score(),
+                                                         self.roi_proposal_net['TRAIN'].get_labels(),
+                                                         self.fast_rcnn_cls_loss])
+        np.set_printoptions(precision=2)
+        print(cls_score)
+        print(lab)
+        print('Class Loss: %f' % loss_clss)
         self.print_log('Step %d: loss = %.6f' % (self.step, loss))
+
+    def train_class(self,):
+        iterations = int(np.ceil(self.num_images['TRAIN'] / self.flags['batch_size']) * 5)
+        for i in tqdm(range(iterations)):
+            loss = self._run_train_class_iter()
+            if i % 550 == 0:
+                self.print_log('Step %d: loss = %.6f' % (i, loss))
 
     def train(self):
         """ Run training function. Save model upon completion """
@@ -230,6 +258,7 @@ def main():
         flags['restore_file'] = 'part_' + str(args['file_epoch']) + '.ckpt.meta'
     model = FasterRcnnConv5(flags)
     if int(args['train']) == 1:
+        model.train_class()
         model.train()
     if int(args['eval']) == 1:
         model.test()
