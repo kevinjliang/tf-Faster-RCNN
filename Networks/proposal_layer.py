@@ -57,11 +57,18 @@ def _proposal_layer_py(rpn_bbox_cls_prob, rpn_bbox_pred, im_dims, cfg_key, _feat
     # Only minibatch of 1 supported
     assert rpn_bbox_cls_prob.shape[0] == 1, \
         'Only single item batches are supported' 
-        
-    pre_nms_topN  = 1000 # cfg[cfg_key].RPN_PRE_NMS_TOP_N
-    post_nms_topN = 100 # cfg[cfg_key].RPN_POST_NMS_TOP_N
-    nms_thresh    = 0.8 # cfg[cfg_key].RPN_NMS_THRESH
-    min_size      = 12 # cfg[cfg_key].RPN_MIN_SIZE
+    
+    if cfg_key == 'TRAIN':
+        pre_nms_topN  = cfg.TRAIN.RPN_PRE_NMS_TOP_N
+        post_nms_topN = cfg.TRAIN.RPN_POST_NMS_TOP_N
+        nms_thresh    = cfg.TRAIN.RPN_NMS_THRESH
+        min_size      = cfg.TRAIN.RPN_MIN_SIZE
+    else: # cfg_key == 'TEST':        
+        pre_nms_topN  = cfg.TEST.RPN_PRE_NMS_TOP_N
+        post_nms_topN = cfg.TEST.RPN_POST_NMS_TOP_N
+        nms_thresh    = cfg.TEST.RPN_NMS_THRESH
+        min_size      = cfg.TEST.RPN_MIN_SIZE
+
     
     # the first set of _num_anchors channels are bg probs
     # the second set are the fg probs, which we want

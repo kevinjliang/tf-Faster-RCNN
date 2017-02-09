@@ -20,7 +20,7 @@ from .bbox_transform import bbox_transform_inv, clip_boxes
 from .fast_rcnn_config import cfg
 from .nms_wrapper import nms
 from .Datasets.eval_clutteredMNIST import cluttered_mnist_eval # Find a way to make this generalized
-import tensorflow as tf
+#import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -44,10 +44,10 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
             [2] bbox_ref: Bounding box refinements by the RCNN 
     '''
     image = image.reshape([1,image.shape[0],image.shape[1],1])
-    im_shape = np.array(image.shape[1:3]).reshape([1,2])
+    im_dims = np.array(image.shape[1:3]).reshape([1,2])
     
     # Graph Inputs for Detection
-    feed_dict = {tf_inputs[0]: image, tf_inputs[1]: im_shape}
+    feed_dict = {tf_inputs[0]: image, tf_inputs[1]: im_dims}
                  
     # Evaluate the graph
     rois, cls_prob, bbox_deltas = sess.run(tf_outputs, feed_dict)  
@@ -56,8 +56,11 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
     boxes = rois[:, 1:]
 
     # Apply bounding box regression to Faster RCNN proposed boxes
-    pred_boxes = bbox_transform_inv(boxes, bbox_deltas)
-    #pred_boxes = clip_boxes(pred_boxes, image.shape) .... TODO: fix this box. spits out garbage.
+#    pred_boxes = bbox_transform_inv(boxes, bbox_deltas)
+#    pred_boxes = clip_boxes(pred_boxes, image.shape)
+
+    boxes = clip_boxes(boxes, np.squeeze(im_dims))
+    pred_boxes = np.tile(boxes,(1,bbox_deltas.shape[1]))
     
     return cls_prob, pred_boxes
 
@@ -135,6 +138,14 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
         # Perform Detection
         scores, boxes = _im_detect(sess, image, tf_inputs, tf_outputs)
         
+#        np.set_printoptions(precision=2)
+#        print(scores.shape)
+#        print(scores)
+#        print(sum(scores[:,0]))
+#        print(boxes.shape)
+#        print(boxes)
+#        a = input()
+        
         if vis:
             plt.cla()
             plt.imshow(image)
@@ -148,7 +159,8 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
                 .astype(np.float32, copy=False)
             keep = nms(cls_dets, cfg.TEST.NMS)
             if vis:
-                vis_detections(image, classes[j], cls_dets)
+                gt = np.loadtxt(data_directory + 'Test/Annotations/img' + str(i) + '.txt', ndmin=2)
+                vis_detections(image, classes[j], gt, cls_dets)
             all_boxes[j][i] = cls_dets
         if vis:
            plt.show()
