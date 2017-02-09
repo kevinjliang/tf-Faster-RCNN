@@ -27,7 +27,7 @@ import argparse
 
 # Global Dictionary of Flags
 flags = {
-    'data_directory': '../Data/data_clutter/',  # Location of training/testing files
+    'data_directory': '../Data/data_trans/',  # Location of training/testing files
     'save_directory': '../Logs/',  # Where to create model_directory folder
     'model_directory': 'conv5/',  # Where to create 'Model[n]' folder
     'batch_size': 1,
@@ -51,12 +51,12 @@ class FasterRcnnConv5(Model):
         self.im_dims = {}
 
         # Train data
-        file_train = flags['data_directory'] + 'clutter_mnist_train.tfrecords'
+        file_train = flags['data_directory'] + 'trans_mnist_train.tfrecords'
         self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'] = Data.batch_inputs(self.read_and_decode,
                                                                                            file_train, batch_size=
                                                                                            self.flags['batch_size'])
         # Validation data. No GT Boxes necessary.
-        file_valid = flags['data_directory'] + 'clutter_mnist_valid.tfrecords'
+        file_valid = flags['data_directory'] + 'trans_mnist_valid.tfrecords'
         self.x['VALID'], _, self.im_dims['VALID'] = Data.batch_inputs(self.read_and_decode,
                                                                       file_valid, mode="eval",
                                                                       batch_size=
@@ -125,10 +125,10 @@ class FasterRcnnConv5(Model):
         self.fast_rcnn_bbox_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_bbox_loss()
 
         # Total Loss
-        self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + 100 * self.fast_rcnn_cls_loss)
+        self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss)
 
         # Optimization operation
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(self.cost)
+        self.optimizer = tf.train.AdamOptimizer().minimize(self.cost)
 
         # Classifcation Objective
         if self.flags['restore'] is False:
@@ -261,6 +261,7 @@ def main():
         model.train_class()
         model.train()
     if int(args['eval']) == 1:
+        model.test_print_image()
         model.test()
     model.close()
 
