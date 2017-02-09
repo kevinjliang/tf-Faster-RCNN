@@ -15,7 +15,6 @@ Functions for testing Faster RCNN net after it's been trained
 # Written by Ross Girshick
 # --------------------------------------------------------
 
-
 from .bbox_transform import bbox_transform_inv, clip_boxes
 from .fast_rcnn_config import cfg
 from .nms_wrapper import nms
@@ -54,6 +53,7 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
     
     # Bounding boxes proposed by Faster RCNN
     boxes = rois[:, 1:]
+#    boxes = boxes[:,[1,0,3,2]]
 
     # Apply bounding box regression to Faster RCNN proposed boxes
 #    pred_boxes = bbox_transform_inv(boxes, bbox_deltas)
@@ -65,11 +65,10 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
     return cls_prob, pred_boxes
 
 
-def vis_detections(im, gt_boxes, dets, cls):
+def vis_detections(im, gt_boxes, dets, cls, skip_background=False):
     """Visual debugging of detections."""
     import matplotlib
     matplotlib.use('TkAgg')  # For Mac OS
-    import matplotlib.pyplot as plt
     import matplotlib.patches as patches
     fig, ax = plt.subplots(1)
     
@@ -80,11 +79,13 @@ def vis_detections(im, gt_boxes, dets, cls):
             color = 'b' # Correct label
         elif cls[i] == 0:
             color = 'm' # Background label
+            if skip_background:
+                continue
         else:
             color = 'r' # Mislabel
         ax.imshow(np.squeeze(im), cmap="gray")
         plot_patch(ax, patches, bbox, color)
-    plt.title(str(gt_boxes[0,4]))
+    plt.title(str(int(gt_boxes[0,4])))
     plot_patch(ax, patches, gt_boxes[0][:4], 'g')
 
     # Display Final composite image
@@ -96,10 +97,10 @@ def plot_patch(ax, patches, bbox, color):
     width = bbox[2] - bbox[0]
     rect = patches.Rectangle((bbox[0], bbox[1]), width, height, linewidth=2, edgecolor=color, facecolor='none')
     ax.add_patch(rect)
-    ax.annotate('2', xy=(bbox[0], bbox[1]), xycoords='figure points')
+#    ax.annotate('2', xy=(bbox[0], bbox[1]), xycoords='figure points')
 
 
-def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_image=300, thresh=0.05, vis=False):
+def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_image=300, thresh=0.05, vis=True):
     """Test a Fast R-CNN network on an image database.
     
     sess: TensorFlow session  
@@ -126,7 +127,7 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
     """
     num_images = data_info[0]//20
     num_classes = data_info[1]
-    classes = data_info[2]
+#    classes = data_info[2]
     # all detections are collected into:
     #    all_boxes[cls][image] = N x 5 array of detections in
     #    (x1, y1, x2, y2, score)
@@ -140,39 +141,40 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
         image = imread(im_file)
         
         # Perform Detection
-        scores, boxes = _im_detect(sess, image, tf_inputs, tf_outputs)
+        probs, boxes = _im_detect(sess, image, tf_inputs, tf_outputs)
         
 #        np.set_printoptions(precision=2)
-#        print(scores.shape)
-#        print(scores)
-#        print(sum(scores[:,0]))
+#        print(probs.shape)
+#        print(probs)
+#        print(sum(probs[:,0]))
 #        print(boxes.shape)
 #        print(boxes)
 #        a = input()
 
-        cls = np.argmax(scores, 1)
-        print(cls)
-        gt = np.loadtxt(data_directory + 'Test/Annotations/img' + str(i) + '.txt', ndmin=2)
-        vis_detections(image, gt, boxes, cls)
-        
         if vis:
-            plt.cla()
-            plt.imshow(image)
+            cls = np.argmax(probs, 1)
+            print(cls)
+            gt = np.loadtxt(data_directory + 'Test/Annotations/img' + str(i) + '.txt', ndmin=2)
+            vis_detections(image, gt, boxes, cls)
+            
+#        if vis:
+#            plt.cla()
+#            plt.imshow(image)
     
         # skip j = 0, because it's the background class
         for j in range(1, num_classes):
-            inds = np.where(scores[:, j] > thresh)[0]
-            cls_scores = scores[inds, j]
+            inds = np.where(probs[:, j] > thresh)[0]
+            cls_probs = probs[inds, j]
             cls_boxes = boxes[inds, j*4:(j+1)*4]
-            cls_dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
+            cls_dets = np.hstack((cls_boxes, cls_probs[:, np.newaxis])) \
                 .astype(np.float32, copy=False)
             keep = nms(cls_dets, cfg.TEST.NMS)
-            if vis:
-                gt = np.loadtxt(data_directory + 'Test/Annotations/img' + str(i) + '.txt', ndmin=2)
-                vis_detections(image, classes[j], gt, cls_dets)
+#            if vis:
+#                gt = np.loadtxt(data_directory + 'Test/Annotations/img' + str(i) + '.txt', ndmin=2)
+#                vis_detections(image, classes[j], gt, cls_dets)
             all_boxes[j][i] = cls_dets
-        if vis:
-           plt.show()
+#        if vis:
+#           plt.show()
         # Limit to max_per_image detections *over all classes*
         if max_per_image > 0:
             image_scores = np.hstack([all_boxes[j][i][:, -1]
