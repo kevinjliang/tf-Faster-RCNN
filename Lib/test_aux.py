@@ -65,28 +65,32 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
     return cls_prob, pred_boxes
 
 
-def vis_detections(im, class_name, gt_boxes, dets):
+def vis_detections(im, gt_boxes, dets, cls):
     """Visual debugging of detections."""
     import matplotlib
     matplotlib.use('TkAgg')  # For Mac OS
     import matplotlib.pyplot as plt
     import matplotlib.patches as patches
     fig, ax = plt.subplots(1)
-    for i in range(np.minimum(10, dets.shape[0])):
+    
+    gt_cls = gt_boxes[0,4]
+    for i in range(dets.shape[0]):
         bbox = dets[i, 1:]
+        if cls[i] == gt_cls:
+            color = 'b' # Correct label
+        elif cls[i] == 0:
+            color = 'm' # Background label
+        else:
+            color = 'r' # Mislabel
         ax.imshow(np.squeeze(im), cmap="gray")
-        plot_patch(ax, patches, bbox, gt=False)
-    plt.title(class_name)
-    plot_patch(ax, patches, gt_boxes[0][:4], gt=True)
+        plot_patch(ax, patches, bbox, color)
+    plt.title(str(gt_boxes[0,4]))
+    plot_patch(ax, patches, gt_boxes[0][:4], 'g')
 
     # Display Final composite image
     plt.show()
 
-def plot_patch(ax, patches, bbox, gt):
-    if gt is True:
-        color = 'g'
-    else:
-        color = 'r'
+def plot_patch(ax, patches, bbox, color):
     # Calculate Bounding Box Rectangle and plot it
     height = bbox[3] - bbox[1]
     width = bbox[2] - bbox[0]
@@ -145,6 +149,11 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
 #        print(boxes.shape)
 #        print(boxes)
 #        a = input()
+
+        cls = np.argmax(scores, 1)
+        print(cls)
+        gt = np.loadtxt(data_directory + 'Test/Annotations/img' + str(i) + '.txt', ndmin=2)
+        vis_detections(image, gt, boxes, cls)
         
         if vis:
             plt.cla()

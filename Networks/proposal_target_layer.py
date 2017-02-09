@@ -60,7 +60,7 @@ def _proposal_target_layer_py(rpn_rois, gt_boxes,_num_classes):
             'Only single item batches are supported'
             
     num_images = 1
-    rois_per_image = cfg.TRAIN.BATCH_SIZE / num_images
+    rois_per_image = cfg.TRAIN.BATCH_SIZE // num_images
     fg_rois_per_image = np.round(cfg.TRAIN.FG_FRACTION * rois_per_image)
     
     # Sample rois with classification labels and bounding box regression

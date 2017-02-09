@@ -42,12 +42,12 @@ cfg = __C
 __C.TRAIN = edict()
 #__C.NET_NAME = 'VGGnet'
 # learning rate
-__C.TRAIN.LEARNING_RATE = 0.001
-__C.TRAIN.MOMENTUM = 0.9
-__C.TRAIN.GAMMA = 0.1
-__C.TRAIN.STEPSIZE = 50000
-__C.TRAIN.DISPLAY = 10
-__C.IS_MULTISCALE = False
+#__C.TRAIN.LEARNING_RATE = 0.001
+#__C.TRAIN.MOMENTUM = 0.9
+#__C.TRAIN.GAMMA = 0.1
+#__C.TRAIN.STEPSIZE = 50000
+#__C.TRAIN.DISPLAY = 10
+#__C.IS_MULTISCALE = False
 
 # Scales to compute real features
 #__C.TRAIN.SCALES_BASE = (0.25, 0.5, 1.0, 2.0, 3.0)
@@ -64,27 +64,27 @@ __C.IS_MULTISCALE = False
 
 # Scales to use during training (can list multiple scales)
 # Each scale is the pixel size of an image's shortest side
-__C.TRAIN.SCALES = (600,)
+#__C.TRAIN.SCALES = (600,)
 
 # Max pixel size of the longest side of a scaled input image
-__C.TRAIN.MAX_SIZE = 1000
+#__C.TRAIN.MAX_SIZE = 1000
 
 # Images to use per minibatch
-__C.TRAIN.IMS_PER_BATCH = 2
+__C.TRAIN.IMS_PER_BATCH = 1 # Default: 2
 
 # Minibatch size (number of regions of interest [ROIs])
-__C.TRAIN.BATCH_SIZE = 64
+__C.TRAIN.BATCH_SIZE = 64  # Default: 128
 
 # Fraction of minibatch that is labeled foreground (i.e. class > 0)
-__C.TRAIN.FG_FRACTION = 0.5
+__C.TRAIN.FG_FRACTION = 0.5  # Default: 0.25
 
 # Overlap threshold for a ROI to be considered foreground (if >= FG_THRESH)
 __C.TRAIN.FG_THRESH = 0.5
 
 # Overlap threshold for a ROI to be considered background (class = 0 if
 # overlap in [LO, HI))
-__C.TRAIN.BG_THRESH_HI = 0.15
-__C.TRAIN.BG_THRESH_LO = 0.05
+__C.TRAIN.BG_THRESH_HI = 0.20  # Default: 0.5
+__C.TRAIN.BG_THRESH_LO = 0.00  # Default: 0.1
 
 # Use horizontally-flipped images during training?
 __C.TRAIN.USE_FLIPPED = True
@@ -127,7 +127,7 @@ __C.TRAIN.PROPOSAL_METHOD = 'selective_search'
 __C.TRAIN.ASPECT_GROUPING = True
 
 # Use RPN to detect objects
-__C.TRAIN.HAS_RPN = False
+__C.TRAIN.HAS_RPN = True # Default: False
 # IOU >= thresh: positive example
 __C.TRAIN.RPN_POSITIVE_OVERLAP = 0.7
 # IOU < thresh: negative example
@@ -141,9 +141,9 @@ __C.TRAIN.RPN_BATCHSIZE = 256
 # NMS threshold used on RPN proposals
 __C.TRAIN.RPN_NMS_THRESH = 0.7
 # Number of top scoring boxes to keep before apply NMS to RPN proposals
-__C.TRAIN.RPN_PRE_NMS_TOP_N = 12000
+__C.TRAIN.RPN_PRE_NMS_TOP_N = 2048 # Default: 12000  
 # Number of top scoring boxes to keep after applying NMS to RPN proposals
-__C.TRAIN.RPN_POST_NMS_TOP_N = 2000
+__C.TRAIN.RPN_POST_NMS_TOP_N = 512 # Default: 2000
 # Proposal height and width both need to be greater than RPN_MIN_SIZE (at orig image scale)
 __C.TRAIN.RPN_MIN_SIZE = 16
 # Deprecated (outside weights)
@@ -164,10 +164,10 @@ __C.TEST = edict()
 
 # Scales to use during testing (can list multiple scales)
 # Each scale is the pixel size of an image's shortest side
-__C.TEST.SCALES = (600,)
+#__C.TEST.SCALES = (600,)
 
 # Max pixel size of the longest side of a scaled input image
-__C.TEST.MAX_SIZE = 1000
+#__C.TEST.MAX_SIZE = 1000
 
 # Overlap threshold used for non-maximum suppression (suppress boxes with
 # IoU >= this threshold)
@@ -189,10 +189,10 @@ __C.TEST.PROPOSAL_METHOD = 'selective_search'
 ## NMS threshold used on RPN proposals
 __C.TEST.RPN_NMS_THRESH = 0.7
 ## Number of top scoring boxes to keep before apply NMS to RPN proposals
-__C.TEST.RPN_PRE_NMS_TOP_N = 6000
+__C.TEST.RPN_PRE_NMS_TOP_N = 1000 # Default: 6000
 #__C.TEST.RPN_PRE_NMS_TOP_N = 12000
 ## Number of top scoring boxes to keep after applying NMS to RPN proposals
-__C.TEST.RPN_POST_NMS_TOP_N = 300
+__C.TEST.RPN_POST_NMS_TOP_N = 50 # Default: 300
 #__C.TEST.RPN_POST_NMS_TOP_N = 2000
 # Proposal height and width both need to be greater than RPN_MIN_SIZE (at orig image scale)
 __C.TEST.RPN_MIN_SIZE = 16

@@ -58,7 +58,7 @@ def rpn_bbox_loss(rpn_bbox_pred, rpn_bbox_targets, rpn_inside_weights, rpn_outsi
     TODO: rpn_inside_weights likely deprecated; might consider obliterating
     '''    
     # Constant for weighting bounding box loss with classification loss
-    lam = 10
+    lam = 100
     
     # How far off was the prediction?
     diff = smoothL1(rpn_bbox_pred - rpn_bbox_targets)
