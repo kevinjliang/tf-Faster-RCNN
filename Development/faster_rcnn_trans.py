@@ -54,7 +54,7 @@ class FasterRcnnConv5(Model):
         file_train = flags['data_directory'] + 'trans_mnist_train.tfrecords'
         self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'] = Data.batch_inputs(self.read_and_decode,
                                                                                            file_train, batch_size=self.flags['batch_size'])
-        # Validation data. No GT Boxes necessary.
+        # Validation data; ground truth boxes used for evaluation/visualization only
         file_valid = flags['data_directory'] + 'trans_mnist_valid.tfrecords'
         self.x['VALID'], self.gt_boxes['VALID'], self.im_dims['VALID'] = Data.batch_inputs(self.read_and_decode,
                                                                                           file_valid, mode="eval",
@@ -175,6 +175,7 @@ class FasterRcnnConv5(Model):
         self.step += 1
         for i in tqdm(range(iterations)):
             summary = self._run_train_iter()
+            self._record_training_step(summary)
             if self.step % (self.flags['display_step']) == 0:
                 self._record_train_metrics()
 #            if self.step % (self.flags['display_step']) *5 == 0:
@@ -186,7 +187,7 @@ class FasterRcnnConv5(Model):
                 epochs += 1
                 if self.step % (self.num_images['TRAIN'] * 1) == 0:
                     self._save_model(section=epochs) 
-            self._record_training_step(summary)
+
 
     def test(self):
         """ Evaluate network on the test set. """
@@ -262,7 +263,7 @@ def main():
 #        model.train_class()
         model.train()
     if int(args['eval']) == 1:
-        model.test_print_image()
+#        model.test_print_image()
         model.test()
     model.close()
 
