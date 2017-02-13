@@ -65,7 +65,7 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
     return cls_prob, pred_boxes
 
 
-def vis_detections(im, gt_boxes, dets, cls, skip_background=False):
+def vis_detections(im, gt_boxes, dets, cls, skip_background=True):
     """Visual debugging of detections."""
     import matplotlib
     matplotlib.use('TkAgg')  # For Mac OS

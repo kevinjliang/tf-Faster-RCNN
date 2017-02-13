@@ -187,7 +187,7 @@ __C.TEST.HAS_RPN = True
 __C.TEST.PROPOSAL_METHOD = 'selective_search'
 
 ## NMS threshold used on RPN proposals
-__C.TEST.RPN_NMS_THRESH = 0.7
+__C.TEST.RPN_NMS_THRESH = 0.3 # Default: 0.7
 ## Number of top scoring boxes to keep before apply NMS to RPN proposals
 __C.TEST.RPN_PRE_NMS_TOP_N = 1000 # Default: 6000
 #__C.TEST.RPN_PRE_NMS_TOP_N = 12000
