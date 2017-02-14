@@ -1,10 +1,18 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Feb  9 15:13:11 2017
+
+@author: kjl27
+"""
+
 # -*- coding: utf-8 -*-
 """
 Created on Sat Dec 31 13:22:36 2016
 
 @author: Kevin Liang
 
-Faster R-CNN model using ResNet as the convolutional feature extractor
+Faster R-CNN model using a simple 5-layer conv net as the convolutional feature extractor
 
 Reorganizing a few things relative to faster_rcnn_conv5
 """
@@ -13,7 +21,7 @@ import sys
 
 sys.path.append('../')
 
-from Lib.TensorBase.tensorbase.base import Model, Data, Layers
+from Lib.TensorBase.tensorbase.base import Model, Data
 from Lib.test_aux import test_net, vis_detections
 
 from Networks.convnet import convnet
@@ -27,7 +35,7 @@ import argparse
 
 # Global Dictionary of Flags
 flags = {
-    'data_directory': '../Data/data_trans/',  # Location of training/testing files
+    'data_directory': '../Data/data_clutter/',  # Location of training/testing files
     'save_directory': '../Logs/',  # Where to create model_directory folder
     'model_directory': 'conv5/',  # Where to create 'Model[n]' folder
     'batch_size': 1,
@@ -51,11 +59,11 @@ class FasterRcnnConv5(Model):
         self.im_dims = {}
 
         # Train data
-        file_train = flags['data_directory'] + 'trans_mnist_train.tfrecords'
+        file_train = flags['data_directory'] + 'clutter_mnist_train.tfrecords'
         self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'] = Data.batch_inputs(self.read_and_decode,
                                                                                            file_train, batch_size=self.flags['batch_size'])
         # Validation data; ground truth boxes used for evaluation/visualization only
-        file_valid = flags['data_directory'] + 'trans_mnist_valid.tfrecords'
+        file_valid = flags['data_directory'] + 'clutter_mnist_valid.tfrecords'
         self.x['VALID'], self.gt_boxes['VALID'], self.im_dims['VALID'] = Data.batch_inputs(self.read_and_decode,
                                                                                           file_valid, mode="eval",
                                                                                           batch_size=self.flags['batch_size'],
@@ -188,7 +196,6 @@ class FasterRcnnConv5(Model):
                 if self.step % (self.num_images['TRAIN'] * 1) == 0:
                     self._save_model(section=epochs) 
 
-
     def test(self):
         """ Evaluate network on the test set. """
         data_info = (self.num_images['TEST'], flags['num_classes'], flags['classes'])
@@ -239,7 +246,7 @@ def main():
     flags['seed'] = 1234
 
     # Parse Arguments
-    parser = argparse.ArgumentParser(description='Bayesian Ladder Networks Arguments')
+    parser = argparse.ArgumentParser(description='Faster RCNN Arguments')
     parser.add_argument('-n', '--run_num', default=0)  # Saves all under /save_directory/model_directory/Model[n]
     parser.add_argument('-e', '--epochs', default=1)  # Number of epochs for which to train the model
     parser.add_argument('-m', '--model_restore', default=1)  # Restores from /save_directory/model_directory/Model[n]
