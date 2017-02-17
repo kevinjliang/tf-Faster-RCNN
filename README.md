@@ -13,9 +13,10 @@ The deep models in this implementation are built on [TensorBase](https://github.
 
 
 ### Requirements: Software
-1. TensorFlow (obviously): I recommend Anaconda for your Python distribution and package management. See [TensorFlow Installation with Anaconda](https://www.tensorflow.org/get_started/os_setup#anaconda_installation) 
-2. Some additional python packages you may or may not already have: `cython`, `easydict`, `scipy`, `pickle`, `Pillow`, `tqdm`. These should all be pip installable within your Anaconda environment (pip install [package]) 
-3. TensorBase: Tensorbase is used as a submodule, so you can get this recursively while cloning this repo. See [Installation](#installation) below.
+1. Python 3.5: I recommend Anaconda for your Python distribution and package management. See (2) below.
+2. TensorFlow v0.12: See [TensorFlow Installation with Anaconda](https://www.tensorflow.org/get_started/os_setup#anaconda_installation). Note: upgrading to TensorFlow v1.0 is on our to-do list.
+3. Some additional python packages you may or may not already have: `cython`, `easydict`, `scipy`, `pickle`, `Pillow`, `tqdm`. These should all be pip installable within your Anaconda environment (pip install [package]) 
+4. TensorBase: Tensorbase is used as a submodule, so you can get this recursively while cloning this repo. See [Installation](#installation) below.
 
 
 ### Installation
