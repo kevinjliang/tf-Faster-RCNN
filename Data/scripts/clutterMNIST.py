@@ -17,11 +17,12 @@ from tqdm import tqdm
 from scipy.ndimage.interpolation import zoom
 from scipy.misc import imsave
 
-import tensorflow as tf
-import numpy as np
 import argparse
+import numpy as np
 import os
 import random
+import shutil
+import tensorflow as tf
 
 
 # Global Flag Dictionary
@@ -45,6 +46,7 @@ def main():
 
     # Load and Convert Data
     all_data, all_labels = load_data()
+    shutil.rmtree("MNIST_data")
     make_directory(args['dir'])
     if args['test'] != 'PNG':
         print('Saving Test Set as TFRecords file.')
@@ -166,18 +168,43 @@ def generate_cluttered_digit(input_image, image_dim, label, data):
     w = np.random.randint(low=int(28/2), high=int(28*2))
     digit = zoom(input_image, (h/28, w/28))
 
-    # Randomly choose location in image_out and save in bbox list
+    # Randomly choose location in image_out
     x = np.random.randint(low=0, high=image_dim - w)
     y = np.random.randint(low=0, high=image_dim - h)
 
     # Insert digit into image_out and get max
     image_out[y:y + h, x:x + w] += digit
     max_val = image_out.max()
+    
+    # Tighten box
+    rows = np.sum(image_out,axis=0).round(1)
+    cols = np.sum(image_out,axis=1).round(1)
+    
+    left = np.nonzero(rows)[0][0]
+    right = np.nonzero(rows)[0][-1]
+    upper = np.nonzero(cols)[0][0]
+    lower = np.nonzero(cols)[0][-1]
+    
+    # If box is too narrow or too short, pad it out to >12
+    width = right - left
+    if width < 12:
+        pad = np.ceil((12 - width)/2)
+        left  = int(left - pad)
+        right = int(right + pad)
+    
+    height = lower - upper
+    if height < 12:
+        pad = np.ceil((12 - height)/2)
+        upper = int(upper - pad)
+        lower = int(lower + pad)
 
     # Save Ground Truth Bounding boxes with Label in 4th position
     if label == 0:  # Faster RCNN regards 0 as background, so change the label for all zeros to 10
         label = 10
-    gt_box = [x, y, x+w, y+h, label]
+    gt_box = [left, upper, right, lower, label]
+    
+    # Track "energy" in gt_box (to prevent clutter insertion)
+    energy = np.sum(image_out[upper:lower, left:right])
 
     # Add in total number of clutter patches
     for j in range(int(image_dim/4)):
@@ -193,14 +220,20 @@ def generate_cluttered_digit(input_image, image_dim, label, data):
         # Randomly choose location to insert clutter
         x = np.random.randint(low=0, high=image_dim - 8)
         y = np.random.randint(low=0, high=image_dim - 8)
-
-        # Insert digit fragment and normalize any over-saturated pixels
-        image_out[x:x + 8, y:y + 8] += fragment[px:px + 8, py:py + 8]
-        for x1 in range(x, x + 8):
-            for y1 in range(y, y+8):
-                if image_out[x1, y1] > max_val:
-                    image_out[x1, y1] = max_val
-
+            
+        # Insert digit fragment  
+        image_out[y:(y+8), x:(x+8)] += fragment[py:(py+8), px:(px+8)]
+        
+        # Don't insert clutter into the true bounding box
+        new_energy = np.sum(image_out[upper:lower, left:right])
+        if energy != new_energy:
+            print("invading space " + str(x) + " " + str(y))
+            image_out[y:(y+8), x:(x+8)] -= fragment[py:(py+8), px:(px+8)]
+            continue
+        
+    # Normalize any over-saturated pixels
+    image_out = np.clip(image_out, 0, max_val)
+        
     # Subtract mean from image and scale to be between -1 and 1
     image_out -= image_out.mean()
     image_out = image_out / np.abs(image_out).max()
