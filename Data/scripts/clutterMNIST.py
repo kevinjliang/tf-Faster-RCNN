@@ -201,7 +201,7 @@ def generate_cluttered_digit(input_image, image_dim, label, data):
     # Save Ground Truth Bounding boxes with Label in 4th position
     if label == 0:  # Faster RCNN regards 0 as background, so change the label for all zeros to 10
         label = 10
-    gt_box = [left, upper, right, lower, label]
+    gt_box = [int(left), int(upper), int(right), int(lower), int(label)]
     
     # Track "energy" in gt_box (to prevent clutter insertion)
     energy = np.sum(image_out[upper:lower, left:right])
@@ -227,7 +227,6 @@ def generate_cluttered_digit(input_image, image_dim, label, data):
         # Don't insert clutter into the true bounding box
         new_energy = np.sum(image_out[upper:lower, left:right])
         if energy != new_energy:
-            print("invading space " + str(x) + " " + str(y))
             image_out[y:(y+8), x:(x+8)] -= fragment[py:(py+8), px:(px+8)]
             continue
         
