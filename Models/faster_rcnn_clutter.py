@@ -39,7 +39,7 @@ flags = {
     'save_directory': '../Logs/',  # Where to create model_directory folder
     'model_directory': 'conv5/',  # Where to create 'Model[n]' folder
     'batch_size': 1,
-    'display_step': 200,  # How often to display loss
+    'display_step': 500,  # How often to display loss
     'num_classes': 11,  # 10 digits, +1 for background
     'classes': ('__background__', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'),
     'anchor_scales': [1, 2, 3]
@@ -130,27 +130,11 @@ class FasterRcnnConv5(Model):
         self.fast_rcnn_cls_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_cls_loss()
         self.fast_rcnn_bbox_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_bbox_loss()
 
-        # Total Loss
+        # Total Loss (Note: Fast R-CNN bbox refinement loss disabled)
         self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss)
 
         # Optimization operation
         self.optimizer = tf.train.AdamOptimizer().minimize(self.cost)
-
-#        # Classifcation Objective
-#        if self.flags['restore'] is False:
-#            class_model = Layers(self.cnn['TRAIN'].get_output())
-#            class_model.flatten()
-#            class_model.fc(1024)
-#            class_model.fc(11, activation_fn=None)
-#            self.class_cost = tf.nn.sparse_softmax_cross_entropy_with_logits(class_model.get_output(),
-#                                                                            self.gt_boxes['TRAIN'][:, 4])
-#
-#            self.optimizer_class = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(self.class_cost)
-
-#    def _run_train_class_iter(self):
-#        """ Run training iteration"""
-#        loss, _ = self.sess.run([self.class_cost, self.optimizer_class])
-#        return loss
 
     def _run_train_iter(self):
         """ Run training iteration"""
@@ -159,21 +143,8 @@ class FasterRcnnConv5(Model):
 
     def _record_train_metrics(self):
         """ Record training metrics """
-        loss, cls_score, lab, loss_clss = self.sess.run([self.cost, self.fast_rcnn_net['TRAIN'].get_cls_score(),
-                                                         self.roi_proposal_net['TRAIN'].get_labels(),
-                                                         self.fast_rcnn_cls_loss])
-#        np.set_printoptions(precision=2)
-#        print(cls_score)
-#        print(lab)
-#        print('Class Loss: %f' % loss_clss)
+        loss = self.sess.run(self.cost)
         self.print_log('Step %d: loss = %.6f' % (self.step, loss))
-
-#    def train_class(self,):
-#        iterations = int(np.ceil(self.num_images['TRAIN'] / self.flags['batch_size']) * 5)
-#        for i in tqdm(range(iterations)):
-#            loss = self._run_train_class_iter()
-#            if i % 550 == 0:
-#                self.print_log('Step %d: loss = %.6f' % (i, loss))
 
     def train(self):
         """ Run training function. Save model upon completion """
@@ -186,11 +157,6 @@ class FasterRcnnConv5(Model):
             self._record_training_step(summary)
             if self.step % (self.flags['display_step']) == 0:
                 self._record_train_metrics()
-#            if self.step % (self.flags['display_step']) *5 == 0:
-#                cls_score, lab = self.sess.run([self.fast_rcnn_net['TRAIN'].get_cls_score(), self.roi_proposal_net['TRAIN'].get_labels()])
-#                np.set_printoptions(precision=2)
-#                print(cls_score)
-#                print(lab)
             if self.step % (self.num_images['TRAIN']) == 0:  # save model every 1 epoch
                 epochs += 1
                 if self.step % (self.num_images['TRAIN'] * 1) == 0:
@@ -249,9 +215,9 @@ def main():
     parser = argparse.ArgumentParser(description='Faster RCNN Arguments')
     parser.add_argument('-n', '--run_num', default=0)  # Saves all under /save_directory/model_directory/Model[n]
     parser.add_argument('-e', '--epochs', default=1)  # Number of epochs for which to train the model
+    parser.add_argument('-r', '--restore', default=0)  # Binary to restore from a model. 0 = No restore.
     parser.add_argument('-m', '--model_restore', default=1)  # Restores from /save_directory/model_directory/Model[n]
     parser.add_argument('-f', '--file_epoch', default=1)  # Restore filename: 'part_[f].ckpt.meta'
-    parser.add_argument('-r', '--restore', default=0)  # Binary to restore from a model. 0 = No restore.
     parser.add_argument('-t', '--train', default=1)  # Binary to train model. 0 = No train.
     parser.add_argument('-v', '--eval', default=1)  # Binary to evalulate model. 0 = No eval.
     args = vars(parser.parse_args())
@@ -267,10 +233,9 @@ def main():
         flags['restore_file'] = 'part_' + str(args['file_epoch']) + '.ckpt.meta'
     model = FasterRcnnConv5(flags)
     if int(args['train']) == 1:
-#        model.train_class()
         model.train()
     if int(args['eval']) == 1:
-#        model.test_print_image()
+        model.test_print_image()
         model.test()
     model.close()
 
