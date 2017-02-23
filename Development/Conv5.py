@@ -111,7 +111,7 @@ class Conv5(Model):
         """ Define losses and initialize optimizer """
         # Losses (come from TRAIN networks)
         self.label = self.gt_boxes['TRAIN'][:,4]
-        self.cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(self.logits['TRAIN'], self.label))
+        self.cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits['TRAIN'], labels=self.label))
 
         # Optimization operation
         self.optimizer = tf.train.AdamOptimizer().minimize(self.cost)

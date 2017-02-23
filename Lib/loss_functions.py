@@ -36,7 +36,7 @@ def rpn_cls_loss(rpn_cls_score,rpn_labels):
     rpn_labels = tf.reshape(tf.gather(rpn_labels,tf.where(tf.not_equal(rpn_labels,-1))),[-1])
     
     # Cross entropy error
-    rpn_cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(rpn_cls_score, rpn_labels))
+    rpn_cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=rpn_cls_score, labels=rpn_labels))
     
     return rpn_cross_entropy
     
@@ -64,7 +64,7 @@ def rpn_bbox_loss(rpn_bbox_pred, rpn_bbox_targets, rpn_inside_weights, rpn_outsi
     diff = smoothL1(rpn_bbox_pred - rpn_bbox_targets)
     
     # Only count loss for positive anchors
-    rpn_bbox_reg = tf.reduce_mean(tf.mul(rpn_outside_weights,diff))
+    rpn_bbox_reg = tf.reduce_mean(tf.multiply(rpn_outside_weights,diff))
     
     return lam*rpn_bbox_reg    
     
@@ -77,7 +77,7 @@ def fast_rcnn_cls_loss(fast_rcnn_cls_score, labels):
     Standard cross-entropy loss on logits
     '''
     # Cross entropy error
-    fast_rcnn_cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(tf.squeeze(fast_rcnn_cls_score), labels))
+    fast_rcnn_cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=tf.squeeze(fast_rcnn_cls_score), labels=labels))
     
     return fast_rcnn_cross_entropy
     
@@ -105,7 +105,7 @@ def fast_rcnn_bbox_loss(fast_rcnn_bbox_pred, bbox_targets, roi_inside_weights, r
     diff = smoothL1(fast_rcnn_bbox_pred - bbox_targets)
     
     # Only count loss for positive anchors
-    roi_bbox_reg = tf.reduce_mean(tf.mul(roi_outside_weights,diff))
+    roi_bbox_reg = tf.reduce_mean(tf.multiply(roi_outside_weights,diff))
     
     return lam*roi_bbox_reg
     
@@ -124,4 +124,4 @@ def smoothL1(x):
     close = 0.5 * x**2
     far = tf.abs(x) - 0.5
 
-    return tf.select(conditional,close,far)
+    return tf.where(conditional,close,far)

@@ -106,7 +106,7 @@ def print_ckpt_var():
 def main():
     file_train = flags['data_directory'] + 'trans_mnist_train.tfrecords'
     x, _, _ = Data.batch_inputs(read_and_decode, file_train, batch_size=flags['batch_size'])
-    x = tf.pack([x, x, x], 3)
+    x = tf.stack([x, x, x], 3)
     with slim.arg_scope(resnet_arg_scope()):
         _ = resnet50(x)
     variables_to_restore = slim.get_model_variables()
