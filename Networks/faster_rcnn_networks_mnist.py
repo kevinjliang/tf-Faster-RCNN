@@ -143,7 +143,7 @@ class roi_proposal:
         self.rpn_cls_prob = rpn_softmax(self.rpn_cls_score)
         
         # Determine best proposals
-        key = 'TRAIN' if self.eval_mode == False else 'TEST'
+        key = 'TRAIN' if self.eval_mode is False else 'TEST'
         self.blobs = proposal_layer(rpn_bbox_cls_prob=self.rpn_cls_prob, rpn_bbox_pred=self.rpn_bbox_pred, im_dims=self.im_dims, cfg_key=key, _feat_stride=self.rpn_net._feat_stride, anchor_scales=self.flags['anchor_scales'])
         
         if self.eval_mode == False:
@@ -152,23 +152,23 @@ class roi_proposal:
                 proposal_target_layer(rpn_rois=self.blobs, gt_boxes=self.gt_boxes,_num_classes=self.flags['num_classes'])
     
     def get_rois(self):
-        return self.rois if self.eval_mode==False else self.blobs
+        return self.rois if self.eval_mode is False else self.blobs
         
     def get_labels(self):
-        assert self.eval_mode == False, 'No labels without ground truth boxes'
+        assert self.eval_mode is False, 'No labels without ground truth boxes'
         return self.labels
         
     def get_bbox_targets(self):
-        assert self.eval_mode == False, 'No bounding box targets without ground truth boxes'
+        assert self.eval_mode is False, 'No bounding box targets without ground truth boxes'
         return self.bbox_targets
         
     def get_bbox_inside_weights(self):
         # TODO: Might clobber this
-        assert self.eval_mode == False, 'No RPN inside weights without ground truth boxes'
+        assert self.eval_mode is False, 'No RPN inside weights without ground truth boxes'
         return self.bbox_inside_weights
         
     def get_bbox_outside_weights(self):
-        assert self.eval_mode == False, 'No RPN outside weights without ground truth boxes'
+        assert self.eval_mode is False, 'No RPN outside weights without ground truth boxes'
         return self.bbox_outside_weights
         
     

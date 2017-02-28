@@ -22,16 +22,17 @@ import sys
 sys.path.append('../')
 
 from Lib.TensorBase.tensorbase.base import Model, Data
-from Lib.test_aux import test_net, vis_detections
+from Lib.test_aux import test_net, vis_detections, _im_detect
 
 from Networks.convnet import convnet
-from Networks.faster_rcnn_networks import rpn, roi_proposal, fast_rcnn
+from Networks.faster_rcnn_networks_mnist import rpn, roi_proposal, fast_rcnn
 
 from tqdm import tqdm
 
 import numpy as np
 import tensorflow as tf
 import argparse
+import os
 
 # Global Dictionary of Flags
 flags = {
@@ -42,13 +43,17 @@ flags = {
     'display_step': 500,  # How often to display loss
     'num_classes': 11,  # 10 digits, +1 for background
     'classes': ('__background__', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'),
-    'anchor_scales': [1, 2, 3]
+    'anchor_scales': [0.5, 1, 2]
 }
 
 
 class FasterRcnnConv5(Model):
     def __init__(self, flags_input):
         super().__init__(flags_input, flags_input['run_num'], vram=0.2, restore=flags_input['restore_num'])
+        if flags_input['restore'] is True:
+            self.epochs = flags_input['file_epoch']
+        else:  # not restore
+            self.epochs = 0
         self.print_log("Seed: %d" % flags_input['seed'])
         self.threads, self.coord = Data.init_threads(self.sess)
 
@@ -62,15 +67,9 @@ class FasterRcnnConv5(Model):
         file_train = flags['data_directory'] + 'clutter_mnist_train.tfrecords'
         self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'] = Data.batch_inputs(self.read_and_decode,
                                                                                            file_train, batch_size=self.flags['batch_size'])
-        # Validation data; ground truth boxes used for evaluation/visualization only
-        file_valid = flags['data_directory'] + 'clutter_mnist_valid.tfrecords'
-        self.x['VALID'], self.gt_boxes['VALID'], self.im_dims['VALID'] = Data.batch_inputs(self.read_and_decode,
-                                                                                          file_valid, mode="eval",
-                                                                                          batch_size=self.flags['batch_size'],
-                                                                                          num_threads=1, num_readers=1)
-        # Test data. No GT Boxes.
-        self.x['TEST'] = tf.placeholder(tf.float32, [None, 128, 128, 1])
-        self.im_dims['TEST'] = tf.placeholder(tf.int32, [None, 2])
+        # Validation data. No GT Boxes.
+        self.x['EVAL'] = tf.placeholder(tf.float32, [None, 128, 128, 1])
+        self.im_dims['EVAL'] = tf.placeholder(tf.int32, [None, 2])
 
         self.num_images = {'TRAIN': 55000, 'VALID': 5000, 'TEST': 10000}
 
@@ -95,32 +94,27 @@ class FasterRcnnConv5(Model):
         with tf.variable_scope('model'):
             self._faster_rcnn(self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'], 'TRAIN')
 
-        # Valid network => Uses same weights as train network
+        # Eval network => Uses same weights as train network
         with tf.variable_scope('model', reuse=True):
             assert tf.get_variable_scope().reuse is True
-            self._faster_rcnn(self.x['VALID'], None, self.im_dims['VALID'], 'VALID')
-
-        # Test network => Uses same weights as train network
-        with tf.variable_scope('model', reuse=True):
-            assert tf.get_variable_scope().reuse is True
-            self._faster_rcnn(self.x['TEST'], None, self.im_dims['TEST'], 'TEST')
+            self._faster_rcnn(self.x['EVAL'], None, self.im_dims['EVAL'], 'EVAL')
 
     def _faster_rcnn(self, x, gt_boxes, im_dims, key):
         # VALID and TEST are both evaluation mode
-        eval_mode = True if (key == 'VALID' or key == 'TEST') else False
+        eval_mode = True if (key == 'EVAL') else False
 
         self.cnn[key] = convnet(x, [5, 3, 3, 3, 3], [32, 64, 64, 128, 128], strides=[2, 2, 1, 2, 1])
-        featureMaps = self.cnn[key].get_output()
+        feature_maps = self.cnn[key].get_output()
         _feat_stride = self.cnn[key].get_feat_stride()
 
         # Region Proposal Network (RPN)
-        self.rpn_net[key] = rpn(featureMaps, gt_boxes, im_dims, _feat_stride, eval_mode, flags)
+        self.rpn_net[key] = rpn(feature_maps, gt_boxes, im_dims, _feat_stride, eval_mode, flags)
 
         # Roi Pooling
         self.roi_proposal_net[key] = roi_proposal(self.rpn_net[key], gt_boxes, im_dims, eval_mode, flags)
 
         # R-CNN Classification
-        self.fast_rcnn_net[key] = fast_rcnn(featureMaps, self.roi_proposal_net[key], eval_mode)
+        self.fast_rcnn_net[key] = fast_rcnn(feature_maps, self.roi_proposal_net[key], eval_mode)
 
     def _optimizer(self):
         """ Define losses and initialize optimizer """
@@ -134,7 +128,7 @@ class FasterRcnnConv5(Model):
         self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss)
 
         # Optimization operation
-        self.optimizer = tf.train.AdamOptimizer().minimize(self.cost)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.flags['rate']).minimize(self.cost)
 
     def _run_train_iter(self):
         """ Run training iteration"""
@@ -148,7 +142,6 @@ class FasterRcnnConv5(Model):
 
     def train(self):
         """ Run training function. Save model upon completion """
-        epochs = 0
         iterations = int(np.ceil(self.num_images['TRAIN'] / self.flags['batch_size']) * self.flags['num_epochs'])
         self.print_log('Training for %d iterations' % iterations)
         self.step += 1
@@ -158,41 +151,81 @@ class FasterRcnnConv5(Model):
             if self.step % (self.flags['display_step']) == 0:
                 self._record_train_metrics()
             if self.step % (self.num_images['TRAIN']) == 0:  # save model every 1 epoch
-                epochs += 1
-                if self.step % (self.num_images['TRAIN'] * 1) == 0:
-                    self._save_model(section=epochs) 
+                self.epochs += 1
+                if self.step % (self.num_images['TRAIN'] * 5) == 0:
+                    self._save_model(section=self.epochs)
+                    self.eval(test=False)
 
-    def test(self):
-        """ Evaluate network on the test set. """
-        data_info = (self.num_images['TEST'], flags['num_classes'], flags['classes'])
+    def eval(self, test=True):
+        """ Evaluate network on the validation set. """
+        if test is True:
+            key = 'TEST'
+            data_directory = flags['data_directory'] + 'Test/'
+        else:  # valid
+            key = 'VALID'
+            data_directory = flags['data_directory'] + 'Valid/'
 
-        tf_inputs = (self.x['TEST'], self.im_dims['TEST'])
-        tf_outputs = (self.roi_proposal_net['TEST'].get_rois(),
-                      self.fast_rcnn_net['TEST'].get_cls_prob(),
-                      self.fast_rcnn_net['TEST'].get_bbox_refinement())
+        print('Detecting images in %s set' % key)
+        data_info = (self.num_images[key], flags['num_classes'], flags['classes'])
 
-        class_metrics = test_net(self.sess, flags['data_directory'], data_info, tf_inputs, tf_outputs)
-        print(class_metrics)
+        tf_inputs = (self.x['EVAL'], self.im_dims['EVAL'])
+        tf_outputs = (self.roi_proposal_net['EVAL'].get_rois(),
+                      self.fast_rcnn_net['EVAL'].get_cls_prob(),
+                      self.fast_rcnn_net['EVAL'].get_bbox_refinement())
+
+        class_metrics = test_net(self.sess, data_directory, data_info, tf_inputs, tf_outputs)
+        self.record_eval_metrics(class_metrics, key)
+
+    def record_eval_metrics(self, class_metrics, key):
+        """ Record evaluation metrics and print to log and terminal """
+        map = np.mean(class_metrics)
+        self.print_log("Mean Average Precision on " + key + " Set: %f" % map)
+        fname = self.flags['logging_directory'] + key + '_Accuracy.txt'
+        if os.path.isfile(fname):
+            self.print_log("Appending to " + key + " file")
+            file = open(fname, 'a')
+        else:
+            self.print_log("Making New " + key + " file")
+            file = open(fname, 'w')
+        file.write('Epoch: %d' % self.epochs)
+        file.write(key + ' set mAP: %f \n' % map)
+        file.close()
         
-    def test_print_image(self):
+    def vis_eval(self, test=False):
         """ Read data through self.sess and plot out """
-        print("Running 100 iterations of simple data transfer from queue to np.array")
+
+        if test is True:
+            data_directory = flags['data_directory'] + 'Test/'
+        else:  # valid
+            data_directory = flags['data_directory'] + 'Valid/'
+
         for i in range(100):
-            bboxes, cls_score, gt_boxes, image = self.sess.run([self.roi_proposal_net['VALID'].get_rois(),
-                                                                self.fast_rcnn_net['VALID'].get_cls_prob(),
-                                                                self.gt_boxes['VALID'], self.x['VALID']])
+            im_file = data_directory + 'Images/img' + str(i) + '.npy'  # Saved as numpy binary file
+            image = np.load(im_file)
+
+            tf_inputs = (self.x['EVAL'], self.im_dims['EVAL'])
+            tf_outputs = (self.roi_proposal_net['EVAL'].get_rois(),
+                          self.fast_rcnn_net['EVAL'].get_cls_prob(),
+                          self.fast_rcnn_net['EVAL'].get_bbox_refinement())
+
+            # Perform Detection
+            cls_score, bboxes = _im_detect(self.sess, image, tf_inputs, tf_outputs)
+            gt_boxes = np.loadtxt(data_directory + 'Annotations/img' + str(i) + '.txt', ndmin=2)
+
             cls = np.argmax(cls_score, 1)
-            print(cls_score.shape)
-            print(cls)
-            vis_detections(np.squeeze(image[0]), gt_boxes, bboxes, cls)
-            print('Image Num: %d' % i)
+            print('Image Label: %d' % int(gt_boxes[0][4]))
+            vis_detections(image, gt_boxes, bboxes, cls)
 
     def close(self):
         Data.exit_threads(self.threads, self.coord)
 
+    def _print_metrics(self):
+        self.print_log("Learning Rate: %f" % self.flags['rate'])
+        self.print_log("Epochs: %d" % self.flags['num_epochs'])
+
     @staticmethod
     def read_and_decode(example_serialized):
-        """ Read and decode binarized, raw MNIST dataset from .tfrecords file generated by clutterMNIST.py """
+        """ Read and decode binarized, raw MNIST dataset from .tfrecords file generated by MNIST.py """
         features = tf.parse_single_example(
             example_serialized,
             features={
@@ -220,12 +253,15 @@ def main():
     parser.add_argument('-f', '--file_epoch', default=1)  # Restore filename: 'part_[f].ckpt.meta'
     parser.add_argument('-t', '--train', default=1)  # Binary to train model. 0 = No train.
     parser.add_argument('-v', '--eval', default=1)  # Binary to evalulate model. 0 = No eval.
+    parser.add_argument('-l', '--learn_rate', default=0.0001)  # learning Rate
     args = vars(parser.parse_args())
 
     # Set Arguments
     flags['num_epochs'] = int(args['epochs'])
     flags['restore_num'] = int(args['model_restore'])
     flags['run_num'] = int(args['run_num'])
+    flags['file_epoch'] = int(args['file_epoch'])
+    flags['rate'] = float(args['learn_rate'])
     if args['restore'] == 0:
         flags['restore'] = False
     else:
@@ -235,8 +271,8 @@ def main():
     if int(args['train']) == 1:
         model.train()
     if int(args['eval']) == 1:
-        model.test_print_image()
-        model.test()
+        #model.test_print_image()
+        model.eval(test=True)
     model.close()
 
 

@@ -41,96 +41,102 @@ def voc_ap(rec, prec):
     return ap
 
 
-def cluttered_mnist_eval(test_image_object, test_directory, num_images, ovthresh=0.5):
+def cluttered_mnist_eval(test_image_object, data_directory, num_images, ovthresh=0.4):
     """
     Evalulates predicted detections on cluttered MNIST dataset
     :param test_image_object: array, obj[cls][image] = N x 5 [x1, y1, x2, y2, cls_score]
-    :param test_directory: str, location of the "Test" folder. Should end with "../Test/".
+    :param data_directory: str, location of the evaluation folder. Should end with "../Test/" or "../Valid/".
     :param ovthresh: float, between 1 and 0, threshold for rejecting bbox
     :return: class_metrics: list, each index is a digit class which holds a tuple of rec, prec, and ap
     """
     # Get Ground Truth numbers for classes
     total_num = np.zeros([11])
-    print('Loading Grouth Truth Data to count number of grouth truth per class')
+    print('Loading Ground Truth Data to count number of ground truth per class')
     for x in tqdm(range(num_images)):  # number of test data
         key = 'img' + str(x)
-        gt_boxes = np.loadtxt(test_directory + 'Annotations/' + key + '.txt', ndmin=2)
+        gt_boxes = np.loadtxt(data_directory + 'Annotations/' + key + '.txt', ndmin=2)
         for g in range(gt_boxes.shape[0]):
             label = int(gt_boxes[g, 4])
             total_num[label] += 1
+    print('Total Number of Images per class:')
+    print(total_num)
 
-    # Designate arrays to hold ap for each class
+    # Define class_metrics list
+    # Labels array holds booleans as to whether an image/gt has been counted yet
     class_metrics = list()
+    labels = [False] * np.sum(total_num)
 
     # Calculate IoU for all classes and all images
     for c in range(1, len(test_image_object)):  # loop through all classes (skip background class)
-        print('Now Calculating average precision for class: %d' % c)
-        class_tp = list()
-        class_fp = list()
+
+        # Transform test_image_object into an np.array with all dets together.
+        class_dets = test_image_object[c]
+        all_dets = list()
+        for dets_list in class_dets:
+            if len(dets_list) == 0:
+                continue
+            else:
+                all_dets.extend(dets_list)
+        all_dets = np.array(all_dets)
+
+        # Sort the detections by confidence (cls_score)
+        confidence = [score for score in all_dets[:, 0]]
+        confidence = np.array(confidence)
+        indx = np.argsort(-confidence)
+        all_dets = all_dets[indx, :]
+
+        # Preallocate true positive and false positive arrays with zeros (number of detections)
+        nd = confidence.shape[0]
+        tp = np.zeros(nd)
+        fp = np.zeros(nd)
 
         # go down dets and mark TPs and FPs
-        for i in range(len(test_image_object[c])):  # loop through all images
+        for d in range(nd):  # loop through all detections
 
-            # Get image detections and preallocate arrays
-            image_dets = test_image_object[c][i]
-            nd = len(image_dets)
-            tp = np.zeros(nd)
-            fp = np.zeros(nd)
+            # Get ground truth
+            img_indx = int(all_dets[d, 1])
+            key = 'img' + str(img_indx)
+            gt_boxes = np.loadtxt(data_directory + '/Annotations/' + key + '.txt', ndmin=2)
 
-            # Get groundtruth
-            key = 'img' + str(i)
-            gt_boxes = np.loadtxt(test_directory + '/Annotations/' + key + '.txt', ndmin=2)
-
+            # Store proposal dets as bb and ground truth as bbgt
             bbgt = gt_boxes[:, :4]
-            labels = gt_boxes[:, 4]
-            labels_det = [False] * len(labels)
-            ovmax = -np.inf  # In case no overlaps result
+            bb = all_dets[d, 2:6]
 
-            for d in range(nd):  # loop through all dets in a given image
+            # compute intersection
+            ixmin = np.maximum(bbgt[:, 0], bb[0])
+            iymin = np.maximum(bbgt[:, 1], bb[1])
+            ixmax = np.minimum(bbgt[:, 2], bb[2])
+            iymax = np.minimum(bbgt[:, 3], bb[3])
+            iw = np.maximum(ixmax - ixmin + 1., 0.)
+            ih = np.maximum(iymax - iymin + 1., 0.)
+            inters = iw * ih
 
-                # Store particular dets as bb
-                bb = image_dets[d, :4]
+            # compute union
+            uni = ((bb[2] - bb[0] + 1.) * (bb[3] - bb[1] + 1.) +
+                   (bbgt[:, 2] - bbgt[:, 0] + 1.) *
+                   (bbgt[:, 3] - bbgt[:, 1] + 1.) - inters)
 
-                # compute overlaps intersection
-                ixmin = np.maximum(bbgt[:, 0], bb[0])
-                iymin = np.maximum(bbgt[:, 1], bb[1])
-                ixmax = np.minimum(bbgt[:, 2], bb[2])
-                iymax = np.minimum(bbgt[:, 3], bb[3])
-                iw = np.maximum(ixmax - ixmin + 1., 0.)
-                ih = np.maximum(iymax - iymin + 1., 0.)
-                inters = iw * ih
+            # computer IoU
+            overlaps = inters / uni
+            ovmax = np.max(overlaps)
 
-                # union
-                uni = ((bb[2] - bb[0] + 1.) * (bb[3] - bb[1] + 1.) +
-                       (bbgt[:, 2] - bbgt[:, 0] + 1.) *
-                       (bbgt[:, 3] - bbgt[:, 1] + 1.) - inters)
-
-                overlaps = inters / uni
-                ovmax = np.max(overlaps)
-                jmax = np.argmax(overlaps)
-
-                # Threshold
-                if ovmax > ovthresh:
-                    if not labels_det[jmax]:
-                        tp[d] = 1.
-                        labels_det[jmax] = True
-                    else:
-                        fp[d] = 1.
+            # Threshold
+            if ovmax > ovthresh:
+                if labels[img_indx] is False:  # ensure no ground truth box is double counted
+                    tp[d] = 1
+                    labels[img_indx] = True
                 else:
-                    fp[d] = 1.
+                    fp[d] = 1
+            else:
+                fp[d] = 1.
 
-            # Add scores from all dets in one image to the class true positives and false positives
-            class_tp.extend(tp)
-            class_fp.extend(fp)
+        # compute recall and precision
+        cum_fp = np.cumsum(fp)
+        cum_tp = np.cumsum(tp)
+        rec = cum_tp / float(total_num[c])
+        prec = cum_tp / np.maximum(cum_tp + cum_fp, np.finfo(np.float64).eps)  # avoid divide by zero
 
-        # compute precision recall
-        fp = np.cumsum(class_fp)
-        tp = np.cumsum(class_tp)
-        rec = tp / float(total_num[c])
-
-        # avoid divide by zero in case the first detection matches a difficult
-        # ground truth
-        prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
+        # compute average precision and store
         ap = voc_ap(rec, prec)
         class_metrics.append(ap)
     print('Mean Average Precision: %f' % np.mean(class_metrics))
