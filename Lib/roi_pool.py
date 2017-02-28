@@ -26,9 +26,9 @@ def roi_pool(featureMaps,rois,im_dims):
     
     # ROI box coordinates. Must be normalized and ordered to [y1, x1, y2, x2]
     boxes = rois[:,1:]
-    normalization = tf.cast(tf.pack([im_dims[:,1],im_dims[:,0],im_dims[:,1],im_dims[:,0]],axis=1),dtype=tf.float32)
+    normalization = tf.cast(tf.stack([im_dims[:,1],im_dims[:,0],im_dims[:,1],im_dims[:,0]],axis=1),dtype=tf.float32)
     boxes = tf.div(boxes,normalization)
-    boxes = tf.pack([boxes[:,1],boxes[:,0],boxes[:,3],boxes[:,2]],axis=1)  # y1, x1, y2, x2
+    boxes = tf.stack([boxes[:,1],boxes[:,0],boxes[:,3],boxes[:,2]],axis=1)  # y1, x1, y2, x2
     
     # ROI pool output size
     crop_size = tf.constant([14,14])

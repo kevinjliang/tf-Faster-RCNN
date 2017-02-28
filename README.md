@@ -1,5 +1,5 @@
 # tf-Faster-RCNN: *Work in progress (both the code and this README)*
-A Python 3.5 + TensorFlow implementation of Faster R-CNN ([paper](https://arxiv.org/abs/1506.01497)). See official implementations here:
+A Python 3.5 + TensorFlow v1.0 implementation of Faster R-CNN ([paper](https://arxiv.org/abs/1506.01497)). See official implementations here:
 - [Python + Caffe](https://github.com/rbgirshick/py-faster-rcnn)
 - [MATLAB + Caffe](https://github.com/ShaoqingRen/faster_rcnn)
 
@@ -13,10 +13,26 @@ The deep models in this implementation are built on [TensorBase](https://github.
 
 
 ### Requirements: Software
-1. Python 3.5: I recommend Anaconda for your Python distribution and package management. See (2) below.
-2. TensorFlow v0.12: See [TensorFlow Installation with Anaconda](https://www.tensorflow.org/get_started/os_setup#anaconda_installation). Note: upgrading to TensorFlow v1.0 is on our to-do list.
-3. Some additional python packages you may or may not already have: `cython`, `easydict`, `scipy`, `pickle`, `Pillow`, `tqdm`. These should all be pip installable within your Anaconda environment (pip install [package]) 
-4. TensorBase: Tensorbase is used as a submodule, so you can get this recursively while cloning this repo. See [Installation](#installation) below.
+1. Ubuntu 16: I haven't tested it on any other Linux distributions or versions, but there's a chance it might work as is. Let me know if it does!
+2. Python 3.5: I recommend Anaconda for your Python distribution and package management. Make sure to have Python 3.5, as 3.6 is not currently supported by TensorFlow. See (3) below.
+3. TensorFlow v1.0: See [TensorFlow Installation with Anaconda](https://www.tensorflow.org/install/install_linux#InstallingAnaconda). Specifiy Python 3.5 when creating your Conda environment:
+  ```Shell
+  # Create a Conda environment for TensorFlow v1.0 with Python 3.5
+  conda create --name tensorflow python 3.5
+  
+  # Activate your enviroment
+  source activate tensorflow
+  
+  # Install TensorFlow v1.0, for Python 3.5 with GPU support
+  pip install --ignore-installed --upgrade \
+  https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow_gpu-1.0.0-cp35-cp35m-linux_x86_64.whl
+  ```
+4. Some additional python packages you may or may not already have: `cython`, `easydict`, `matplotlib` `scipy`, `Pillow`, `tqdm`. These should all be pip installable within your Anaconda environment (pip install [package]):
+
+  ```Shell
+  pip install cython easydict matplotlib scipy Pillow tqdm 
+  ```
+5. TensorBase: Tensorbase is used as a submodule, so you can get this recursively while cloning this repo. See [Installation](#installation) below.
 
 
 ### Installation
@@ -68,7 +84,7 @@ To run one of these models:
   cd $tf-FRC_ROOT/Models
   
   # Change flags accordingly
-  python faster_rcnn_[trans/clutter].py -n [Model num, ex 1] -e [# of epochs, ex 3]
+  python faster_rcnn_[trans/clutter].py -n [Model num, ex 1] -e [Num of epochs, ex 3]
   ```
   
 3. To reload a previously trained model and test

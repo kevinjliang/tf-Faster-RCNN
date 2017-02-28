@@ -95,7 +95,7 @@ class resnet101(Model):
 
     def _optimizer(self):
         const = 1/self.flags['batch_size']
-        self.xentropy = const * tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(self.pyx, self.y, name='xentropy'))
+        self.xentropy = const * tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=self.pyx, labels=self.y, name='xentropy'))
         self.weight = self.flags['weight_decay'] * tf.add_n(tf.get_collection('weight_losses'))
         self.cost = tf.reduce_sum(self.xentropy + self.weight)
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(self.cost)
