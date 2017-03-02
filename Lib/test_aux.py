@@ -146,7 +146,7 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
         
         # Perform Detection
         probs, boxes = _im_detect(sess, image, tf_inputs, tf_outputs)
-    
+
         # skip j = 0, because it's the background class
         for j in range(1, num_classes):
             inds = np.where(probs[:, j] > thresh)[0]

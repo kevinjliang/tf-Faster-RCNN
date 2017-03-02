@@ -64,7 +64,7 @@ def cluttered_mnist_eval(test_image_object, data_directory, num_images, ovthresh
     # Define class_metrics list
     # Labels array holds booleans as to whether an image/gt has been counted yet
     class_metrics = list()
-    labels = [False] * np.sum(total_num)
+    labels = [False] * np.sum(total_num).astype(int)
 
     # Calculate IoU for all classes and all images
     for c in range(1, len(test_image_object)):  # loop through all classes (skip background class)
