@@ -70,24 +70,24 @@ The deep models in this implementation are built on [TensorBase](https://github.
 ### Training and Testing
 If you would like to try training and/or testing the Faster R-CNN network, we currently have models available for translated and cluttered MNIST. Translated MNIST is an MNIST digit embedded into a larger black image. Cluttered MNIST is the same, but with random pieces of other MNIST digits scattered throughout. Both serve as simple datasets for detection, as the algorithm must find the digit and classify it.
 
-To run one of these models:
+To run one of these models (we'll use cluttered MNIST, since it's more interesting):
 
 1. Generate the data:
   ```Shell
   cd $tf-FRC_ROOT/Data/scripts
   
-  # This will create a folder $tf-FRC_ROOT/Data/data_[trans/clutter] with the images and bounding box data
-  python [trans/clutter]MNIST.py
+  # Generate images and bounding box data; place it in the folder $tf-FRC_ROOT/Data/data_clutter 
+  python MNIST.py
   ```
 2. Run the model:
   ```Shell
   cd $tf-FRC_ROOT/Models
   
   # Change flags accordingly
-  python faster_rcnn_[trans/clutter].py -n [Model num, ex 1] -e [Num of epochs, ex 3]
+  python faster_rcnn_clutter.py -n [Model num, ex 1] -e [Num of epochs, ex 3]
   ```
   
 3. To reload a previously trained model and test
   ```Shell
-  python faster_rcnn_[trans/clutter].py -r 1 -m [Model num] -f [epoch to restore] -t 0
+  python faster_rcnn_clutter.py -r 1 -m [Model num] -f [epoch to restore] -t 0
   ```
