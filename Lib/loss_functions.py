@@ -64,7 +64,7 @@ def rpn_bbox_loss(rpn_bbox_pred, rpn_bbox_targets, rpn_inside_weights, rpn_outsi
     diff = smoothL1(rpn_bbox_pred - rpn_bbox_targets)
     
     # Only count loss for positive anchors
-    rpn_bbox_reg = tf.reduce_mean(tf.multiply(rpn_outside_weights,diff))
+    rpn_bbox_reg = tf.reduce_sum(tf.multiply(rpn_outside_weights,diff))
     
     return lam*rpn_bbox_reg    
     
