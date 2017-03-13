@@ -58,13 +58,18 @@ def rpn_bbox_loss(rpn_bbox_pred, rpn_bbox_targets, rpn_inside_weights, rpn_outsi
     TODO: rpn_inside_weights likely deprecated; might consider obliterating
     '''    
     # Constant for weighting bounding box loss with classification loss
-    lam = 100
+    lam = 10
+    
+    # Transposing
+    rpn_bbox_targets = tf.transpose(rpn_bbox_targets, [0,2,3,1])
+    rpn_inside_weights = tf.transpose(rpn_inside_weights, [0,2,3,1])
+    rpn_outside_weights = tf.transpose(rpn_outside_weights, [0,2,3,1])
     
     # How far off was the prediction?
     diff = smoothL1(rpn_bbox_pred - rpn_bbox_targets)
     
-    # Only count loss for positive anchors
-    rpn_bbox_reg = tf.reduce_mean(tf.multiply(rpn_outside_weights,diff))
+    # Only count loss for positive anchors. Make sure it's a sum.
+    rpn_bbox_reg = tf.reduce_sum(tf.multiply(rpn_outside_weights,diff))
     
     return lam*rpn_bbox_reg    
     
