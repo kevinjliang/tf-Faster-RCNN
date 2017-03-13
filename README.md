@@ -27,10 +27,10 @@ The deep models in this implementation are built on [TensorBase](https://github.
   pip install --ignore-installed --upgrade \
   https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow_gpu-1.0.0-cp35-cp35m-linux_x86_64.whl
   ```
-4. Some additional python packages you may or may not already have: `cython`, `easydict`, `matplotlib` `scipy`, `Pillow`, `tqdm`. These should all be pip installable within your Anaconda environment (pip install [package]):
+4. Some additional python packages you may or may not already have: `cython`, `easydict`, `matplotlib` `scipy`, `Pillow`, `pyyaml`, `tqdm`. These should all be pip installable within your Anaconda environment (pip install [package]):
 
   ```Shell
-  pip install cython easydict matplotlib scipy Pillow tqdm 
+  pip install cython easydict matplotlib scipy Pillow pyyaml tqdm 
   ```
 5. TensorBase: Tensorbase is used as a submodule, so you can get this recursively while cloning this repo. See [Installation](#installation) below.
 
@@ -60,11 +60,11 @@ The deep models in this implementation are built on [TensorBase](https://github.
 
 
 ### Repo Organization
-- Data: Scripts for creating, downloading, organizing datasets. For your local copy, the actual data also resides here
+- Data: Scripts for creating, downloading, organizing datasets. For your local copy, the actual data will also reside here
 - Development: Experimental code still in development
 - Lib: Library functions necessary to run Faster R-CNN
-- Models: Runnable files that create a Faster R-CNN class with a specific convolutional network and dataset
-- Network: Neural networks or components that form parts of a Faster R-CNN network
+- Models: Runnable files that create a Faster R-CNN class with a specific convolutional network and dataset. Config files for changing model parameters are also here.
+- Networks: Neural networks or components that form parts of a Faster R-CNN network
 
 
 ### Training and Testing
