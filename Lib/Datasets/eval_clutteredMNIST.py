@@ -41,7 +41,7 @@ def voc_ap(rec, prec):
     return ap
 
 
-def cluttered_mnist_eval(test_image_object, data_directory, num_images, ovthresh=0.4):
+def cluttered_mnist_eval(test_image_object, data_directory, num_images, num_classes=11, ovthresh=0.4):
     """
     Evalulates predicted detections on cluttered MNIST dataset
     :param test_image_object: array, obj[cls][image] = N x 5 [x1, y1, x2, y2, cls_score]
@@ -50,7 +50,7 @@ def cluttered_mnist_eval(test_image_object, data_directory, num_images, ovthresh
     :return: class_metrics: list, each index is a digit class which holds a tuple of rec, prec, and ap
     """
     # Get Ground Truth numbers for classes
-    total_num = np.zeros([11])
+    total_num = np.zeros([num_classes])
     print('Loading Ground Truth Data to count number of ground truth per class')
     for x in tqdm(range(num_images)):  # number of test data
         key = 'img' + str(x)
@@ -80,7 +80,12 @@ def cluttered_mnist_eval(test_image_object, data_directory, num_images, ovthresh
         all_dets = np.array(all_dets)
 
         # Sort the detections by confidence (cls_score)
-        confidence = [score for score in all_dets[:, 0]]
+        if len(all_dets.shape) == 2:
+            confidence = [score for score in all_dets[:, 0]]
+        else:
+            print('All Dets not right shape.')
+            class_metrics = np.zeros([num_classes]).tolist()
+            return class_metrics
         confidence = np.array(confidence)
         indx = np.argsort(-confidence)
         all_dets = all_dets[indx, :]
