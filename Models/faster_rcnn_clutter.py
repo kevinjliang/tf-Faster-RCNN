@@ -22,24 +22,24 @@ import sys
 sys.path.append('../')
 
 from Lib.TensorBase.tensorbase.base import Model, Data
-from Lib.test_aux import test_net, vis_detections, _im_detect
+from Lib.fast_rcnn_config import cfg_from_file
+from Lib.test_aux import test_net#, vis_detections, _im_detect
 
 from Networks.convnet import convnet
 from Networks.faster_rcnn_networks_mnist import rpn, roi_proposal, fast_rcnn
-
-from tqdm import tqdm
 
 import numpy as np
 import tensorflow as tf
 import argparse
 import os
+from tqdm import tqdm
 
 # Global Dictionary of Flags
 flags = {
     'data_directory': '../Data/data_clutter/',  # Location of training/testing files
     'save_directory': '../Logs/',  # Where to create model_directory folder
     'model_directory': 'conv5/',  # Where to create 'Model[n]' folder
-    'batch_size': 1,
+    'batch_size': 1,  # This is fixed
     'display_step': 500,  # How often to display loss
     'num_classes': 11,  # 10 digits, +1 for background
     'classes': ('__background__', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'),
@@ -48,13 +48,15 @@ flags = {
 
 
 class FasterRcnnConv5(Model):
-    def __init__(self, flags_input):
-        super().__init__(flags_input, flags_input['run_num'], vram=0.2, restore=flags_input['restore_num'])
+    def __init__(self, flags_input, dictionary):
         if flags_input['restore'] is True:
             self.epochs = flags_input['file_epoch']
         else:  # not restore
             self.epochs = 0
-        self.print_log("Seed: %d" % flags_input['seed'])
+        self.lr = flags['learning_rate']    
+        super().__init__(flags_input, flags_input['run_num'], vram=0.2, restore=flags_input['restore_num'])
+        self.print_log(dictionary)
+        self.print_log(flags_input)
         self.threads, self.coord = Data.init_threads(self.sess)
 
     def _data(self):
@@ -128,7 +130,7 @@ class FasterRcnnConv5(Model):
         self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss)
 
         # Optimization operation
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.flags['rate']).minimize(self.cost)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(self.cost)
 
     def _run_train_iter(self):
         """ Run training iteration"""
@@ -137,8 +139,9 @@ class FasterRcnnConv5(Model):
 
     def _record_train_metrics(self):
         """ Record training metrics """
-        loss = self.sess.run(self.cost)
-        self.print_log('Step %d: loss = %.6f' % (self.step, loss))
+        loss, loss1, loss2, loss3 = self.sess.run([self.cost, self.rpn_cls_loss, self.rpn_bbox_loss, self.fast_rcnn_cls_loss])
+        self.print_log('Step %d: total loss = %.6f, rpn cls loss = %.6f, rpn bbox loss = %.6f rcnn cls loss = %.6f' %
+                       (self.step, loss, loss1, loss2, loss3))
 
     def train(self):
         """ Run training function. Save model upon completion """
@@ -152,7 +155,7 @@ class FasterRcnnConv5(Model):
                 self._record_train_metrics()
             if self.step % (self.num_images['TRAIN']) == 0:  # save model every 1 epoch
                 self.epochs += 1
-                if self.step % (self.num_images['TRAIN'] * 5) == 0:
+                if self.step % (self.num_images['TRAIN'] * 1) == 0:
                     self._save_model(section=self.epochs)
                     self.eval(test=False)
 
@@ -190,37 +193,12 @@ class FasterRcnnConv5(Model):
         file.write('Epoch: %d' % self.epochs)
         file.write(key + ' set mAP: %f \n' % map)
         file.close()
-        
-    def vis_eval(self, test=False):
-        """ Read data through self.sess and plot out """
-
-        if test is True:
-            data_directory = flags['data_directory'] + 'Test/'
-        else:  # valid
-            data_directory = flags['data_directory'] + 'Valid/'
-
-        for i in range(100):
-            im_file = data_directory + 'Images/img' + str(i) + '.npy'  # Saved as numpy binary file
-            image = np.load(im_file)
-
-            tf_inputs = (self.x['EVAL'], self.im_dims['EVAL'])
-            tf_outputs = (self.roi_proposal_net['EVAL'].get_rois(),
-                          self.fast_rcnn_net['EVAL'].get_cls_prob(),
-                          self.fast_rcnn_net['EVAL'].get_bbox_refinement())
-
-            # Perform Detection
-            cls_score, bboxes = _im_detect(self.sess, image, tf_inputs, tf_outputs)
-            gt_boxes = np.loadtxt(data_directory + 'Annotations/img' + str(i) + '.txt', ndmin=2)
-
-            cls = np.argmax(cls_score, 1)
-            print('Image Label: %d' % int(gt_boxes[0][4]))
-            vis_detections(image, gt_boxes, bboxes, cls)
 
     def close(self):
         Data.exit_threads(self.threads, self.coord)
 
     def _print_metrics(self):
-        self.print_log("Learning Rate: %f" % self.flags['rate'])
+        self.print_log("Learning Rate: %f" % self.flags['learning_rate'])
         self.print_log("Epochs: %d" % self.flags['num_epochs'])
 
     @staticmethod
@@ -253,25 +231,36 @@ def main():
     parser.add_argument('-f', '--file_epoch', default=1)  # Restore filename: 'part_[f].ckpt.meta'
     parser.add_argument('-t', '--train', default=1)  # Binary to train model. 0 = No train.
     parser.add_argument('-v', '--eval', default=1)  # Binary to evalulate model. 0 = No eval.
-    parser.add_argument('-l', '--learn_rate', default=0.0001)  # learning Rate
+    parser.add_argument('-y', '--yaml', default='cfgs/clutteredMNIST.yml')  # Configuation Parameter overrides
+    parser.add_argument('-l', '--learn_rate', default=0.0001)  # Learning Rate
+    parser.add_argument('-i', '--vis', default=0)  # Visualize test results
+    parser.add_argument('-g', '--gpu', default=0)  # GPU to use
     args = vars(parser.parse_args())
 
     # Set Arguments
-    flags['num_epochs'] = int(args['epochs'])
-    flags['restore_num'] = int(args['model_restore'])
     flags['run_num'] = int(args['run_num'])
-    flags['file_epoch'] = int(args['file_epoch'])
-    flags['rate'] = float(args['learn_rate'])
+    flags['num_epochs'] = int(args['epochs'])
     if args['restore'] == 0:
         flags['restore'] = False
     else:
         flags['restore'] = True
-        flags['restore_file'] = 'part_' + str(args['file_epoch']) + '.ckpt.meta'
-    model = FasterRcnnConv5(flags)
+        flags['restore_file'] = 'part_' + str(args['file_epoch']) + '.ckpt.meta'    
+    flags['restore_num'] = int(args['model_restore'])
+    flags['file_epoch'] = int(args['file_epoch'])
+    if args['yaml'] != 'default':
+        dictionary = cfg_from_file('../Models/' + args['yaml'])
+        print('Restoring from %s file' % args['yaml'])
+    else:
+        dictionary = []
+        print('Using Default settings')
+    flags['learning_rate'] = float(args['learn_rate'])
+    flags['vis'] = True if (int(args['vis']) == 1) else False
+    flags['gpu'] = int(args['gpu'])
+    
+    model = FasterRcnnConv5(flags, dictionary)
     if int(args['train']) == 1:
         model.train()
     if int(args['eval']) == 1:
-        #model.test_print_image()
         model.eval(test=True)
     model.close()
 
