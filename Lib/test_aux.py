@@ -65,15 +65,26 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
     return cls_prob, pred_boxes
 
 
-def vis_detections(im, gt_boxes, dets, cls, class_index=1, skip_background=True):
+def vis_detections(im, gt_boxes, dets, cls, data_info=None, skip_background=True):
     """Visual debugging of detections."""
 
     fig, ax = plt.subplots(1)
 
+    # Plot image
+    if len(im.shape)>2:
+        im = np.squeeze(im[:,:,2])
+    ax.imshow(im, cmap="gray")
+    if dets.shape[0] > 0:
+        plt.title(str(int(dets[0, 1]))) 
+    
+    # Plot ground truth box
     gt_cls = gt_boxes[0, 4]
+    plot_patch(ax, gt_boxes[0][:4], None, None, 'g')
+    
+    # Plot detections
     for i in range(dets.shape[0]):
-        bbox = dets[i, 2:]
         score = dets[i, 0]
+        bbox = dets[i, 2:]
         if cls[i] == gt_cls:
             color = 'b' # Correct label
         elif cls[i] == 0:
@@ -82,10 +93,12 @@ def vis_detections(im, gt_boxes, dets, cls, class_index=1, skip_background=True)
                 continue
         else:
             color = 'r' # Mislabel
-        ax.imshow(np.squeeze(im[:,:,2]), cmap="gray")
-        plot_patch(ax, bbox, score, 'gun', color)
-    plt.title(str(class_index))
-    plot_patch(ax, gt_boxes[0][:4], None, None, 'g')
+        
+        if data_info == None:
+            class_name = str(cls[i])
+        else:
+            class_name = data_info[2][cls[i]]
+        plot_patch(ax, bbox, score, class_name, color)
 
     # Display Final composite image
     plt.show()
@@ -98,6 +111,7 @@ def plot_patch(ax, bbox, score, class_name, color):
     rect = patches.Rectangle((bbox[0], bbox[1]), width, height, linewidth=2, edgecolor=color, facecolor='none')
     ax.add_patch(rect)
     
+    # Add confidence score and class text to box
     if score is not None:
         ax.text(bbox[0], bbox[1] - 2,
             '{:s} {:.3f}'.format(class_name, score),
@@ -132,7 +146,7 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
     """
     num_images = data_info[0]
     num_classes = data_info[1]
-    flag = 0
+    detection_made = False
 #    classes = data_info[2]
     # all detections are collected into:
     #    all_boxes[cls][image] = N x 5 array of detections in
@@ -154,7 +168,7 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
             inds = np.where(probs[:, j] > thresh)[0]
             if len(inds) == 0:
                 continue
-            flag = 1
+            detection_made = True
             cls_probs = probs[inds, j]              # Class Scores
             cls_index = np.repeat(i, len(inds))     # Index of Image
             cls_boxes = boxes[inds, j*4:(j+1)*4]    # Class Box Predictions
@@ -163,7 +177,7 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
             all_boxes[j][i] = cls_dets
 
     # Ensure that at least some detections were made
-    if flag == 0:
+    if not detection_made:
         print("No detections were made")
         return [[0]]
 
@@ -171,6 +185,9 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
         for _ in range(num_images):
             i = input("Please select the index of the Test Image to display:")
             i = int(i)
+            if i == -1:
+                break
+            
             dets = list()
             cls = list()
             for c in range(1, num_classes):
@@ -186,7 +203,7 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
             im_file = data_directory + 'Images/img' + str(i) + '.npy'  # Saved as numpy binary file
             image = np.load(im_file)
             gt = np.loadtxt(data_directory + 'Annotations/img' + str(i) + '.txt', ndmin=2)
-            vis_detections(image, gt, dets, cls, class_index=i)
+            vis_detections(image, gt, dets, cls, data_info)
 
     # Save detections
     det_dir = data_directory + 'Outputs/'

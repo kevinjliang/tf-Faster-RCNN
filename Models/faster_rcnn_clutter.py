@@ -157,9 +157,9 @@ class FasterRcnnConv5(Model):
                 self.epochs += 1
                 if self.step % (self.num_images['TRAIN'] * 1) == 0:
                     self._save_model(section=self.epochs)
-                    self.eval(test=False)
+                    self.evaluate(test=False)
 
-    def eval(self, test=True):
+    def evaluate(self, test=True):
         """ Evaluate network on the validation set. """
         if test is True:
             key = 'TEST'
@@ -176,13 +176,13 @@ class FasterRcnnConv5(Model):
                       self.fast_rcnn_net['EVAL'].get_cls_prob(),
                       self.fast_rcnn_net['EVAL'].get_bbox_refinement())
 
-        class_metrics = test_net(self.sess, data_directory, data_info, tf_inputs, tf_outputs)
+        class_metrics = test_net(self.sess, data_directory, data_info, tf_inputs, tf_outputs, vis=self.flags['vis'])
         self.record_eval_metrics(class_metrics, key)
 
     def record_eval_metrics(self, class_metrics, key):
         """ Record evaluation metrics and print to log and terminal """
-        map = np.mean(class_metrics)
-        self.print_log("Mean Average Precision on " + key + " Set: %f" % map)
+        mAP = np.mean(class_metrics)
+        self.print_log("Mean Average Precision on " + key + " Set: %f" % mAP)
         fname = self.flags['logging_directory'] + key + '_Accuracy.txt'
         if os.path.isfile(fname):
             self.print_log("Appending to " + key + " file")
@@ -191,7 +191,7 @@ class FasterRcnnConv5(Model):
             self.print_log("Making New " + key + " file")
             file = open(fname, 'w')
         file.write('Epoch: %d' % self.epochs)
-        file.write(key + ' set mAP: %f \n' % map)
+        file.write(key + ' set mAP: %f \n' % mAP)
         file.close()
 
     def close(self):
@@ -261,7 +261,7 @@ def main():
     if int(args['train']) == 1:
         model.train()
     if int(args['eval']) == 1:
-        model.eval(test=True)
+        model.evaluate(test=True)
     model.close()
 
 
