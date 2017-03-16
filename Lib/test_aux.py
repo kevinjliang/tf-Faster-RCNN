@@ -15,7 +15,7 @@ Functions for testing Faster RCNN net after it's been trained
 # Written by Ross Girshick
 # --------------------------------------------------------
 
-from .bbox_transform import clip_boxes#, bbox_transform_inv
+from .bbox_transform import clip_boxes, bbox_transform_inv
 from .Datasets.eval_clutteredMNIST import cluttered_mnist_eval # Find a way to make this generalized
 import matplotlib
 matplotlib.use('TkAgg')  # For Mac OS
@@ -56,11 +56,8 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
     boxes = rois[:, 1:]
 
     # Apply bounding box regression to Faster RCNN proposed boxes
-#    pred_boxes = bbox_transform_inv(boxes, bbox_deltas)
-#    pred_boxes = clip_boxes(pred_boxes, image.shape)
-
-    boxes = clip_boxes(boxes, np.squeeze(im_dims))
-    pred_boxes = np.tile(boxes,(1,bbox_deltas.shape[1]))
+    pred_boxes = bbox_transform_inv(boxes, bbox_deltas)
+    pred_boxes = clip_boxes(pred_boxes, np.squeeze(im_dims))
     
     return cls_prob, pred_boxes
 

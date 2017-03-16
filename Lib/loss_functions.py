@@ -104,13 +104,13 @@ def fast_rcnn_bbox_loss(fast_rcnn_bbox_pred, bbox_targets, roi_inside_weights, r
     TODO: rpn_inside_weights likely deprecated; might consider obliterating
     '''  
     # Constant for weighting bounding box loss with classification loss
-    lam = 1
+    lam = 10
     
     # How far off was the prediction?
     diff = smoothL1(fast_rcnn_bbox_pred - bbox_targets)
     
     # Only count loss for positive anchors
-    roi_bbox_reg = tf.reduce_mean(tf.multiply(roi_outside_weights,diff))
+    roi_bbox_reg = tf.reduce_sum(tf.multiply(roi_outside_weights,diff))
     
     return lam*roi_bbox_reg
     

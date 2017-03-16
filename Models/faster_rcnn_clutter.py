@@ -82,7 +82,7 @@ class FasterRcnnConv5(Model):
         tf.summary.scalar("RPN_bbox_Loss", self.rpn_bbox_loss)
         tf.summary.scalar("Fast_RCNN_Cls_Loss", self.fast_rcnn_cls_loss)
         tf.summary.scalar("Fast_RCNN_Bbox_Loss", self.fast_rcnn_bbox_loss)
-        tf.summary.image("x_train", self.x['TRAIN'])
+#        tf.summary.image("x_train", self.x['TRAIN'])
 
     def _network(self):
         """ Define the network outputs """
@@ -127,7 +127,7 @@ class FasterRcnnConv5(Model):
         self.fast_rcnn_bbox_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_bbox_loss()
 
         # Total Loss (Note: Fast R-CNN bbox refinement loss disabled)
-        self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss)
+        self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss + self.fast_rcnn_bbox_loss)
 
         # Optimization operation
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(self.cost)
@@ -139,9 +139,9 @@ class FasterRcnnConv5(Model):
 
     def _record_train_metrics(self):
         """ Record training metrics """
-        loss, loss1, loss2, loss3 = self.sess.run([self.cost, self.rpn_cls_loss, self.rpn_bbox_loss, self.fast_rcnn_cls_loss])
-        self.print_log('Step %d: total loss = %.6f, rpn cls loss = %.6f, rpn bbox loss = %.6f rcnn cls loss = %.6f' %
-                       (self.step, loss, loss1, loss2, loss3))
+        loss, loss1, loss2, loss3, loss4 = self.sess.run([self.cost, self.rpn_cls_loss, self.rpn_bbox_loss, self.fast_rcnn_cls_loss, self.fast_rcnn_bbox_loss])
+        self.print_log('Step %d: total loss = %.6f rpn cls loss = %.6f rpn bbox loss = %.6f rcnn cls loss = %.6f rcnn bbox loss = %.6f' %
+                       (self.step, loss, loss1, loss2, loss3, loss4))
 
     def train(self):
         """ Run training function. Save model upon completion """
