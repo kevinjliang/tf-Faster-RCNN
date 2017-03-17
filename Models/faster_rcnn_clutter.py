@@ -36,7 +36,7 @@ from tqdm import tqdm
 
 # Global Dictionary of Flags
 flags = {
-    'data_directory': '../Data/data_clutter/',  # Location of training/testing files
+    'data_directory': '../Data/HRI_clutteredMNIST/',  # Location of training/testing files
     'save_directory': '../Logs/',  # Where to create model_directory folder
     'model_directory': 'conv5/',  # Where to create 'Model[n]' folder
     'batch_size': 1,  # This is fixed
@@ -66,9 +66,13 @@ class FasterRcnnConv5(Model):
         self.im_dims = {}
 
         # Train data
-        file_train = flags['data_directory'] + 'clutter_mnist_train.tfrecords'
+        file_train = flags['data_directory'] + 'hri_mnist.tfrecords'
         self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'] = Data.batch_inputs(self.read_and_decode,
                                                                                            file_train, batch_size=self.flags['batch_size'])
+        
+        self.gt_boxes['TRAIN'] = tf.decode_raw(self.gt_boxes['TRAIN'], tf.int32)
+        self.gt_boxes['TRAIN'] = tf.reshape(self.gt_boxes['TRAIN'],[-1,5])
+        
         # Validation data. No GT Boxes.
         self.x['EVAL'] = tf.placeholder(tf.float32, [None, 128, 128, 1])
         self.im_dims['EVAL'] = tf.placeholder(tf.int32, [None, 2])
@@ -208,7 +212,7 @@ class FasterRcnnConv5(Model):
             example_serialized,
             features={
                 'image': tf.FixedLenFeature([], tf.string),
-                'gt_boxes': tf.FixedLenFeature([5], tf.int64, default_value=[-1] * 5),  # 10 classes in MNIST
+                'gt_boxes': tf.FixedLenFeature([], tf.string),  # 10 classes in MNIST
                 'dims': tf.FixedLenFeature([2], tf.int64, default_value=[-1] * 2)
             })
         # now return the converted data
@@ -216,7 +220,7 @@ class FasterRcnnConv5(Model):
         dims = features['dims']
         image = tf.decode_raw(features['image'], tf.float32)
         image = tf.reshape(image, [128, 128, 1])
-        return image, tf.cast(gt_boxes, tf.int32), tf.cast(dims, tf.int32)
+        return image, gt_boxes, tf.cast(dims, tf.int32)
 
 
 def main():
@@ -232,7 +236,7 @@ def main():
     parser.add_argument('-t', '--train', default=1)  # Binary to train model. 0 = No train.
     parser.add_argument('-v', '--eval', default=1)  # Binary to evalulate model. 0 = No eval.
     parser.add_argument('-y', '--yaml', default='cfgs/clutteredMNIST.yml')  # Configuation Parameter overrides
-    parser.add_argument('-l', '--learn_rate', default=0.0001)  # Learning Rate TODO: change back to 0.001
+    parser.add_argument('-l', '--learn_rate', default=0.001)  # Learning Rate TODO: change back to 0.001
     parser.add_argument('-i', '--vis', default=0)  # Visualize test results
     parser.add_argument('-g', '--gpu', default=0)  # GPU to use
     args = vars(parser.parse_args())
