@@ -35,9 +35,9 @@ __C = edict()
 #   from fast_rcnn_config import cfg
 cfg = __C
 
-#
+###############################################################################
 # Training options
-#
+###############################################################################
 
 __C.TRAIN = edict()
 
@@ -119,10 +119,17 @@ __C.TRAIN.RPN_BBOX_INSIDE_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
 # Set to -1.0 to use uniform example weighting
 __C.TRAIN.RPN_POSITIVE_WEIGHT = -1.0
 
+# Relative weight of RPN bounding box loss
+__C.TRAIN.RPN_BBOX_LAMBDA = 10.0
 
-#
+# Relative weight of Fast RCNN bounding box loss
+__C.TRAIN.FRCNN_BBOX_LAMBDA = 1.0
+
+
+
+###############################################################################
 # Testing options
-#
+###############################################################################
 
 __C.TEST = edict()
 
@@ -155,9 +162,9 @@ __C.TEST.RPN_MIN_SIZE = 16
 
 
 
-#
+###############################################################################
 # MISC
-#
+###############################################################################
 
 # The mapping from image coordinates to feature map coordinates might cause
 # some boxes that are distinct in image space to become identical in feature
@@ -171,27 +178,27 @@ __C.DEDUP_BOXES = 1./16.
 # they were trained with
 __C.PIXEL_MEANS = np.array([[[102.9801, 115.9465, 122.7717]]])
 
-# For reproducibility
-__C.RNG_SEED = 3
-
 # A small number that's used many times
 __C.EPS = 1e-14
 
-# Root directory of project
-__C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..', '..'))
+## Root directory of project
+#__C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..', '..'))
+#
+## Data directory
+#__C.DATA_DIR = osp.abspath(osp.join(__C.ROOT_DIR, 'data'))
+#
+## Model directory
+#__C.MODELS_DIR = osp.abspath(osp.join(__C.ROOT_DIR, 'models', 'pascal_voc'))
+#
+## Name (or path to) the matlab executable
+#__C.MATLAB = 'matlab'
+#
+## Place outputs under an experiments directory
+#__C.EXP_DIR = 'default'
 
-# Data directory
-__C.DATA_DIR = osp.abspath(osp.join(__C.ROOT_DIR, 'data'))
 
-# Model directory
-__C.MODELS_DIR = osp.abspath(osp.join(__C.ROOT_DIR, 'models', 'pascal_voc'))
-
-# Name (or path to) the matlab executable
-__C.MATLAB = 'matlab'
-
-# Place outputs under an experiments directory
-__C.EXP_DIR = 'default'
-
+###############################################################################
+###############################################################################
 
 if spawn.find_executable("nvcc"):
     # Use GPU implementation of non-maximum suppression

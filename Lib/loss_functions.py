@@ -8,6 +8,8 @@ Created on Tue Jan 17 15:05:05 2017
 Loss functions
 """
 
+from .fast_rcnn_config import cfg
+
 import tensorflow as tf
 
 
@@ -58,7 +60,7 @@ def rpn_bbox_loss(rpn_bbox_pred, rpn_bbox_targets, rpn_inside_weights, rpn_outsi
     TODO: rpn_inside_weights likely deprecated; might consider obliterating
     '''    
     # Constant for weighting bounding box loss with classification loss
-    lam = 10
+    lam = cfg.TRAIN.RPN_BBOX_LAMBDA
     
     # Transposing
     rpn_bbox_targets = tf.transpose(rpn_bbox_targets, [0,2,3,1])
@@ -104,7 +106,7 @@ def fast_rcnn_bbox_loss(fast_rcnn_bbox_pred, bbox_targets, roi_inside_weights, r
     TODO: rpn_inside_weights likely deprecated; might consider obliterating
     '''  
     # Constant for weighting bounding box loss with classification loss
-    lam = 10
+    lam = cfg.TRAIN.FRCNN_BBOX_LAMBDA
     
     # How far off was the prediction?
     diff = smoothL1(fast_rcnn_bbox_pred - bbox_targets)

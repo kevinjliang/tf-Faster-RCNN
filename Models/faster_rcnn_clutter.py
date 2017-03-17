@@ -140,7 +140,7 @@ class FasterRcnnConv5(Model):
     def _record_train_metrics(self):
         """ Record training metrics """
         loss, loss1, loss2, loss3, loss4 = self.sess.run([self.cost, self.rpn_cls_loss, self.rpn_bbox_loss, self.fast_rcnn_cls_loss, self.fast_rcnn_bbox_loss])
-        self.print_log('Step %d: total loss = %.6f rpn cls loss = %.6f rpn bbox loss = %.6f rcnn cls loss = %.6f rcnn bbox loss = %.6f' %
+        self.print_log('Step %d: total loss=%.6f, rpn_cls loss=%.6f, rpn_bbox loss=%.6f, rcnn_cls loss=%.6f, rcnn_bbox loss=%.6f' %
                        (self.step, loss, loss1, loss2, loss3, loss4))
 
     def train(self):
@@ -232,7 +232,7 @@ def main():
     parser.add_argument('-t', '--train', default=1)  # Binary to train model. 0 = No train.
     parser.add_argument('-v', '--eval', default=1)  # Binary to evalulate model. 0 = No eval.
     parser.add_argument('-y', '--yaml', default='cfgs/clutteredMNIST.yml')  # Configuation Parameter overrides
-    parser.add_argument('-l', '--learn_rate', default=0.0001)  # Learning Rate
+    parser.add_argument('-l', '--learn_rate', default=0.0001)  # Learning Rate TODO: change back to 0.001
     parser.add_argument('-i', '--vis', default=0)  # Visualize test results
     parser.add_argument('-g', '--gpu', default=0)  # GPU to use
     args = vars(parser.parse_args())
