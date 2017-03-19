@@ -62,7 +62,7 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
     return cls_prob, pred_boxes
 
 
-def vis_detections(im, gt_boxes, dets, cls, data_info=None, skip_background=True):
+def vis_detections(n, im, gt_boxes, dets, cls, data_info=None, skip_background=True):
     """Visual debugging of detections."""
 
     fig, ax = plt.subplots(1)
@@ -75,21 +75,24 @@ def vis_detections(im, gt_boxes, dets, cls, data_info=None, skip_background=True
         plt.title(str(int(dets[0, 1]))) 
     
     # Plot ground truth box
-    gt_cls = gt_boxes[0, 4]
-    plot_patch(ax, gt_boxes[0][:4], None, None, 'g')
+#    gt_cls = gt_boxes[0, 4]
+#    plot_patch(ax, gt_boxes[0][:4], None, None, 'g')
     
     # Plot detections
     for i in range(dets.shape[0]):
         score = dets[i, 0]
         bbox = dets[i, 2:]
-        if cls[i] == gt_cls:
+        if cls[i] % 2 == 0:
             color = 'b' # Correct label
-        elif cls[i] == 0:
-            color = 'm' # Background label
-            if skip_background:
-                continue
+            print("Detection made: {0}".format(n))
+#        elif cls[i] == 0:
+#            color = 'm' # Background label
+#            if skip_background:
+#                continue
+#        else:
+#            color = 'r' # Mislabel
         else:
-            color = 'r' # Mislabel
+            continue
         
         if data_info == None:
             class_name = str(cls[i])
@@ -98,7 +101,10 @@ def vis_detections(im, gt_boxes, dets, cls, data_info=None, skip_background=True
         plot_patch(ax, bbox, score, class_name, color)
 
     # Display Final composite image
-    plt.show()
+#    plt.show()
+    save_dir = '/home/kjl27/Documents/TSA/tf-Faster-RCNN/Data/HRI_clutteredMNIST/Test/Det_imgs/'
+    plt.savefig(save_dir + 'img' + str(n) + '.png')
+    plt.close()
 
 
 def plot_patch(ax, bbox, score, class_name, color):
@@ -116,7 +122,7 @@ def plot_patch(ax, bbox, score, class_name, color):
             fontsize=8, color='white')
         
 
-def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_image=300, thresh=0.1, vis=False):
+def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_image=300, thresh=0.5, vis=False):
     """Test a Fast R-CNN network on an image database.
     
     sess: TensorFlow session  
@@ -141,7 +147,7 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
             [2] bbox_ref: Bounding box refinements by the RCNN 
 
     """
-    num_images = data_info[0]
+    num_images = data_info[0]//2
     num_classes = data_info[1]
     detection_made = False
 #    classes = data_info[2]
@@ -178,12 +184,16 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
         print("No detections were made")
         return [[0]]
 
+    det_imgs_dir = data_directory + 'Det_imgs/'
+    if not os.path.exists(det_imgs_dir):
+        os.makedirs(det_imgs_dir)
+
     if vis:
-        for _ in range(num_images):
-            i = input("Please select the index of the Test Image to display:")
-            i = int(i)
-            if i == -1:
-                break
+        for i in range(num_images):
+#            i = input("Please select the index of the Test Image to display:")
+#            i = int(i)
+#            if i == -1:
+#                break
             
             dets = list()
             cls = list()
@@ -200,7 +210,8 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
             im_file = data_directory + 'Images/img' + str(i) + '.npy'  # Saved as numpy binary file
             image = np.load(im_file)
             gt = np.loadtxt(data_directory + 'Annotations/img' + str(i) + '.txt', ndmin=2)
-            vis_detections(image, gt, dets, cls, data_info)
+            vis_detections(i, image, gt, dets, cls, data_info)
+            
 
     # Save detections
     det_dir = data_directory + 'Outputs/'
@@ -211,6 +222,7 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
     with open(det_file, 'wb') as f:
         pickle.dump(all_boxes, f)
 
-    class_metrics = cluttered_mnist_eval(all_boxes, data_directory, num_images, num_classes)
-        
+#    class_metrics = cluttered_mnist_eval(all_boxes, data_directory, num_images, num_classes)
+    
+    class_metrics = 0  
     return class_metrics

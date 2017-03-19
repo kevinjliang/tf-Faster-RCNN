@@ -28,12 +28,12 @@ import tensorflow as tf
 
 # Global Flag Dictionary
 flags = {
-    'nums': {"train": 55000, "valid": 5000, "test": 1204},
+    'nums': {"train": 55000, "valid": 5000, "test": 604},
     'num_classes': 10,
     'im_dims': 128,
     'num_digits': 3,
-    'A': np.array([0, 33,  68, 183, 193, 357, 462, 522, 526, 557, 563]),        # Randomly generated
-    'B': 602+np.array([0, 150, 236, 290, 363, 401, 422, 470, 492, 501, 579])    # Randomly generated
+    'A': np.array([0, 16,  28,  93, 119, 166, 185, 233, 238, 284, 295]),       # Randomly generated
+    'B': 302+np.array([0, 27,  31,  99, 112, 141, 165, 207, 215, 251, 297])    # Randomly generated
 }
 
 def main():
@@ -49,7 +49,7 @@ def main():
 
     convert_train(all_data[0], all_labels[0], directory)
     convert_valid(all_data[1], all_labels[1], directory+'Valid/')
-    convert_test(all_data[1], all_labels[1], directory+'Test/')
+    convert_test(all_data[2], all_labels[2], directory+'Test/')
     
 
 def convert_train(data, labels, data_directory):

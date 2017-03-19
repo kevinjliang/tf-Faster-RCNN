@@ -77,7 +77,7 @@ class FasterRcnnConv5(Model):
         self.x['EVAL'] = tf.placeholder(tf.float32, [None, 128, 128, 1])
         self.im_dims['EVAL'] = tf.placeholder(tf.int32, [None, 2])
 
-        self.num_images = {'TRAIN': 55000, 'VALID': 5000, 'TEST': 10000}
+        self.num_images = {'TRAIN': 55000, 'VALID': 5000, 'TEST': 604}
 
     def _summaries(self):
         """ Define summaries for TensorBoard """
