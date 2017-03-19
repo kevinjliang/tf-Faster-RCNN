@@ -10,3 +10,4 @@ Data/data_trans/*
 Data/MNIST/*
 Data/MNIST_data/*
 .ipynb_checkpoints
+*HRI*
