@@ -232,7 +232,7 @@ def main():
     parser.add_argument('-t', '--train', default=1)  # Binary to train model. 0 = No train.
     parser.add_argument('-v', '--eval', default=1)  # Binary to evalulate model. 0 = No eval.
     parser.add_argument('-y', '--yaml', default='cfgs/clutteredMNIST.yml')  # Configuation Parameter overrides
-    parser.add_argument('-l', '--learn_rate', default=0.0001)  # Learning Rate TODO: change back to 0.001
+    parser.add_argument('-l', '--learn_rate', default=0.001)  # Learning Rate TODO: change back to 0.001
     parser.add_argument('-i', '--vis', default=0)  # Visualize test results
     parser.add_argument('-g', '--gpu', default=0)  # GPU to use
     args = vars(parser.parse_args())
