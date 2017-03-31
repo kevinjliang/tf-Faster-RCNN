@@ -35,7 +35,7 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
     image: Image to perform detection on. Should be numpy array    
     tf_inputs: TensorFlow tensor inputs to the computation graph
             [0] x: the image input
-            [1] im_dims: image dimensions of input
+            [1] im_dims: image dimensions of input (height, width)
     tf_outputs: TensorFlow tensor outputs of the computation graph
             [0] rois: RoIs produced by the RPN        
             [1] cls_prob: Classifier probabilities of each object by the RCNN
@@ -134,7 +134,7 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
             [2] classes: identities of each of the classes                
     tf_inputs: TensorFlow tensor inputs to the computation graph
             [0] x: the image input
-            [1] im_dims: image dimensions of input
+            [1] im_dims: image dimensions of input (height, width)
     tf_outputs: TensorFlow tensor outputs of the computation graph
             [0] rois: RoIs produced by the RPN
             [1] cls_prob: Classifier probabilities of each object by the RCNN
