@@ -35,11 +35,43 @@ __C = edict()
 #   from fast_rcnn_config import cfg
 cfg = __C
 
+
+###############################################################################
+# Network Architecture
+###############################################################################
+
+# Classes: The types of objects the algorithm is trying to find
+# First class must be __background__
+__C.CLASSES = ['__background__']
+__C.NUM_CLASSES = 1
+
+# RPN Anchor Box Scales: Anchor boxes will have dimensions scales*16*ratios in image space
+__C.RPN_ANCHOR_SCALES = [8, 16, 32]
+
+# RPN CNN parameters
+__C.RPN_OUTPUT_CHANNELS = [512]
+__C.RPN_FILTER_SIZES    = [3]
+
+# Fast R-CNN Fully Connected Layer hidden unit number
+__C.FRCNN_FC_HIDDEN = [1024, 1024]
+# Fast R-CNN dropout keep rate
+__C.FRCNN_DROPOUT_KEEP_RATE = 0.5
+
+
+
 ###############################################################################
 # Training options
 ###############################################################################
 
 __C.TRAIN = edict()
+
+# Learning rate
+__C.TRAIN.LEARNING_RATE = 0.001
+# Learning rate decay factor
+__C.TRAIN.LEARNING_RATE_DECAY = 2
+# Number of epochs before decaying learning rate 
+__C.TRAIN.LEARNING_RATE_DECAY_RATE = 1
+
 
 # Scales to use during training (can list multiple scales)
 # Each scale is the pixel size of an image's shortest side
@@ -49,7 +81,7 @@ __C.TRAIN = edict()
 #__C.TRAIN.MAX_SIZE = 1000
 
 # Images to use per minibatch
-__C.TRAIN.IMS_PER_BATCH = 1 # Default: 2
+__C.TRAIN.IMS_PER_BATCH = 1 
 
 # Minibatch size (number of regions of interest [ROIs])
 __C.TRAIN.BATCH_SIZE = 128
@@ -66,20 +98,22 @@ __C.TRAIN.BG_THRESH_HI = 0.5
 __C.TRAIN.BG_THRESH_LO = 0.0
 
 # Use horizontally-flipped images during training?
-__C.TRAIN.USE_FLIPPED = True
+__C.TRAIN.USE_HORZ_FLIPPED = True
+# Use vertically-flipped images during training?
+__C.TRAIN.USE_VERT_FLIPPED = False
 
-# Train bounding-box regressors
-__C.TRAIN.BBOX_REG = True
+# Train bounding-box refinement in Fast R-CNN
+__C.TRAIN.BBOX_REFINE = True
 
 # Overlap required between a ROI and ground-truth box in order for that ROI to
 # be used as a bounding-box regression training example
-__C.TRAIN.BBOX_THRESH = 0.5
+#__C.TRAIN.BBOX_THRESH = 0.5
 
 
 # Normalize the targets (subtract empirical mean, divide by empirical stddev)
 __C.TRAIN.BBOX_NORMALIZE_TARGETS = True
 # Deprecated (inside weights)
-__C.TRAIN.BBOX_INSIDE_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
+#__C.TRAIN.BBOX_INSIDE_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
 # Normalize the targets using "precomputed" (or made up) means and stdevs
 # (BBOX_NORMALIZE_TARGETS must also be True)
 __C.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED = False
@@ -90,10 +124,10 @@ __C.TRAIN.BBOX_NORMALIZE_STDS = (0.1, 0.1, 0.2, 0.2)
 # Make minibatches from images that have similar aspect ratios (i.e. both
 # tall and thin or both short and wide) in order to avoid wasting computation
 # on zero-padding.
-__C.TRAIN.ASPECT_GROUPING = True
+#__C.TRAIN.ASPECT_GROUPING = True
 
 # Use RPN to detect objects
-__C.TRAIN.HAS_RPN = True # Default: False
+#__C.TRAIN.HAS_RPN = True # Default: False
 # IOU >= thresh: positive example
 __C.TRAIN.RPN_POSITIVE_OVERLAP = 0.7
 # IOU < thresh: negative example
@@ -144,8 +178,9 @@ __C.TEST = edict()
 # IoU >= this threshold)
 __C.TEST.NMS = 0.3
 
-# Test using bounding-box regressors
-__C.TEST.BBOX_REG = True
+# Test using bounding-box refinement in Fast R-CNN
+# Note: Should not be on if TRAIN.BBOX_REFINE is not also True
+__C.TEST.BBOX_REFINE = True
 
 # Propose boxes
 __C.TEST.HAS_RPN = True
@@ -166,35 +201,25 @@ __C.TEST.RPN_MIN_SIZE = 16
 # MISC
 ###############################################################################
 
-# The mapping from image coordinates to feature map coordinates might cause
-# some boxes that are distinct in image space to become identical in feature
-# coordinates. If DEDUP_BOXES > 0, then DEDUP_BOXES is used as the scale factor
-# for identifying duplicate boxes.
-# 1/16 is correct for {Alex,Caffe}Net, VGG_CNN_M_1024, and VGG16
-__C.DEDUP_BOXES = 1./16.
+# Relative location of data files
+__C.DATA_DIRECTORY = '../Data/'
+# Relative location of where of logging directory
+__C.SAVE_DIRECTORY = '../Logs/'
+# Model directory under logging directory, where 'Model[n]' folder is created
+__C.MODEL_DIRECTORY = 'FRCNN/'
+# TF Slim restore file for resnet50
+__C.RESTORE_SLIM_FILE = ""
 
-# Pixel mean values (BGR order) as a (1, 1, 3) array
-# We use the same pixel mean for all networks even though it's not exactly what
-# they were trained with
-__C.PIXEL_MEANS = np.array([[[102.9801, 115.9465, 122.7717]]])
+# Number of images in each data split
+__C.NUM_IMAGES = {'TRAIN': 0, 'VALID': 0, 'TEST': 0}
 
-# A small number that's used many times
-__C.EPS = 1e-14
+# How often to save TensorFlow checkpoint of model parameters (epochs)
+__C.CHECKPOINT_RATE = 1 
+# How often to evaluate on the validation set (epochs)
+__C.VALID_RATE = 1
+# How often to show training losses (iterations)
+__C.DISPLAY_RATE = 250
 
-## Root directory of project
-#__C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..', '..'))
-#
-## Data directory
-#__C.DATA_DIR = osp.abspath(osp.join(__C.ROOT_DIR, 'data'))
-#
-## Model directory
-#__C.MODELS_DIR = osp.abspath(osp.join(__C.ROOT_DIR, 'models', 'pascal_voc'))
-#
-## Name (or path to) the matlab executable
-#__C.MATLAB = 'matlab'
-#
-## Place outputs under an experiments directory
-#__C.EXP_DIR = 'default'
 
 
 ###############################################################################

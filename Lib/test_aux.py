@@ -16,7 +16,9 @@ Functions for testing Faster RCNN net after it's been trained
 # --------------------------------------------------------
 
 from .bbox_transform import clip_boxes, bbox_transform_inv
-from .Datasets.eval_clutteredMNIST import cluttered_mnist_eval # Find a way to make this generalized
+from .Datasets.eval_clutteredMNIST import cluttered_mnist_eval # TODO: Find a way to make this generalized
+from .fast_rcnn_config import cfg
+
 import matplotlib
 matplotlib.use('TkAgg')  # For Mac OS
 import matplotlib.pyplot as plt
@@ -24,6 +26,7 @@ import matplotlib.patches as patches
 import numpy as np
 import os
 import pickle
+from scipy.misc import imread
 from tqdm import tqdm
 
     
@@ -34,7 +37,7 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
     sess: TensorFlow session
     image: Image to perform detection on. Should be numpy array    
     tf_inputs: TensorFlow tensor inputs to the computation graph
-            [0] x: the image input
+            [0] x: the image input (rows, cols, channels)
             [1] im_dims: image dimensions of input (height, width)
     tf_outputs: TensorFlow tensor outputs of the computation graph
             [0] rois: RoIs produced by the RPN        
@@ -45,6 +48,7 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
         image = np.expand_dims(np.expand_dims(image, 0), 3)
     else:
         image = np.expand_dims(image, 0)
+
     im_dims = np.array(image.shape[1:3]).reshape([1, 2])
 
     feed_dict = {tf_inputs[0]: image, tf_inputs[1]: im_dims}
@@ -55,14 +59,19 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
     # Bounding boxes proposed by Faster RCNN
     boxes = rois[:, 1:]
 
-    # Apply bounding box regression to Faster RCNN proposed boxes
-    pred_boxes = bbox_transform_inv(boxes, bbox_deltas)
-    pred_boxes = clip_boxes(pred_boxes, np.squeeze(im_dims))
+    if cfg.TEST.BBOX_REFINE:
+        # Apply bounding box regression to Faster RCNN proposed boxes
+        pred_boxes = bbox_transform_inv(boxes, bbox_deltas)
+        pred_boxes = clip_boxes(pred_boxes, np.squeeze(im_dims))
+    else:
+        # Or just repeat the boxes, one for each classe
+        pred_boxes = clip_boxes(boxes, np.squeeze(im_dims))
+        pred_boxes = np.tile(pred_boxes, (1, bbox_deltas.shape[1]))
     
     return cls_prob, pred_boxes
 
 
-def vis_detections(im, gt_boxes, dets, cls, data_info=None, skip_background=True):
+def vis_detections(im, gt_boxes, dets, cls, filename=None, skip_background=True):
     """Visual debugging of detections."""
 
     fig, ax = plt.subplots(1)
@@ -91,14 +100,18 @@ def vis_detections(im, gt_boxes, dets, cls, data_info=None, skip_background=True
         else:
             color = 'r' # Mislabel
         
-        if data_info == None:
-            class_name = str(cls[i])
-        else:
-            class_name = data_info[2][cls[i]]
+        class_name = cfg.CLASSES[cls[i]]
+
         plot_patch(ax, bbox, score, class_name, color)
 
+    # Save figure
+    if filename is not None:
+        fig.savefig(filename)
     # Display Final composite image
-    plt.show()
+    else:
+        plt.show()
+        
+    plt.close(fig)
 
 
 def plot_patch(ax, bbox, score, class_name, color):
@@ -116,22 +129,19 @@ def plot_patch(ax, bbox, score, class_name, color):
             fontsize=8, color='white')
         
 
-def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_image=300, thresh=0.1, vis=False):
+def test_net(data_directory, names, sess, tf_inputs, tf_outputs, max_per_image=300, thresh=0.1, vis=False):
     """Test a Fast R-CNN network on an image database.
     
-    sess: TensorFlow session  
     data_directory: Directory to the data. Should be organized as follows:
         |--data_directory/
             |--Annotations/
                 |--*.txt (Annotation Files: (x1,y1,x2,y2,l))
             |--Images/
                 |--*.png (Image files)
-            |--ImageSets/
-                |--test.txt (List of data)
-    data_info: Information about the dataset
-            [0] num_images: number of images to be tested
-            [1] num_classes: number of classes in the dataset
-            [2] classes: identities of each of the classes                
+            |--Names/
+                |--[train/valid/test].txt (List of data)
+    names: list of data files (contents of the above [train/valid/test].txt file)             
+    sess: TensorFlow session  
     tf_inputs: TensorFlow tensor inputs to the computation graph
             [0] x: the image input
             [1] im_dims: image dimensions of input (height, width)
@@ -139,12 +149,16 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
             [0] rois: RoIs produced by the RPN
             [1] cls_prob: Classifier probabilities of each object by the RCNN
             [2] bbox_ref: Bounding box refinements by the RCNN 
-
+    max_per_image: Maximum number of detections per image (TODO: currently does nothing)
+    thresh: Threshold for a non-background detection to be counted
+    vis: Visualize detection in figure using vis_detections
+            
     """
-    num_images = data_info[0]
-    num_classes = data_info[1]
+    num_images = len(names)
+    num_classes = cfg.NUM_CLASSES
+
     detection_made = False
-#    classes = data_info[2]
+
     # all detections are collected into:
     #    all_boxes[cls][image] = N x 5 array of detections in
     #    (x1, y1, x2, y2, score)
@@ -154,8 +168,8 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
     print('Detecting boxes in images:')
     for i in tqdm(range(num_images)):
         # Read in file
-        im_file = data_directory + 'Images/img' + str(i) + '.npy'  # Saved as numpy binary file
-        image = np.load(im_file)
+        im_file = data_directory + 'Images/' + names[i] + '.png'  
+        image = imread(im_file)
         
         # Perform Detection
         probs, boxes = _im_detect(sess, image, tf_inputs, tf_outputs)
@@ -177,14 +191,14 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
     if not detection_made:
         print("No detections were made")
         return [[0]]
+    
+    # Create output directory
+    det_dir = data_directory + 'Outputs/'
+    if not os.path.exists(det_dir):
+        os.makedirs(det_dir)
 
     if vis:
-        for _ in range(num_images):
-            i = input("Please select the index of the Test Image to display:")
-            i = int(i)
-            if i == -1:
-                break
-            
+        for i in tqdm(range(num_images)):            
             dets = list()
             cls = list()
             for c in range(1, num_classes):
@@ -197,20 +211,19 @@ def test_net(sess, data_directory, data_info, tf_inputs, tf_outputs, max_per_ima
             dets = np.array(dets)
             cls = np.array(cls)
 
-            im_file = data_directory + 'Images/img' + str(i) + '.npy'  # Saved as numpy binary file
-            image = np.load(im_file)
-            gt = np.loadtxt(data_directory + 'Annotations/img' + str(i) + '.txt', ndmin=2)
-            vis_detections(image, gt, dets, cls, data_info)
+            im_file = data_directory + 'Images/' + names[i] + '.png'  
+            image = imread(im_file)
 
-    # Save detections
-    det_dir = data_directory + 'Outputs/'
-    if not os.path.exists(det_dir):
-        os.makedirs(det_dir)
-    
+            gt = np.loadtxt(data_directory + 'Annotations/' + names[i] + '.txt', ndmin=2)
+
+            outputPNGfilename = det_dir + names[i]         
+            vis_detections(image, gt, dets, cls, outputPNGfilename)
+
+    # Save detections    
     det_file = det_dir + 'detections.pkl'
     with open(det_file, 'wb') as f:
         pickle.dump(all_boxes, f)
 
-    class_metrics = cluttered_mnist_eval(all_boxes, data_directory, num_images, num_classes)
+    class_metrics = cluttered_mnist_eval(all_boxes, data_directory, names, num_classes)
         
     return class_metrics

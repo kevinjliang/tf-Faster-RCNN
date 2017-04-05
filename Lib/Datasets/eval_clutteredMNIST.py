@@ -41,7 +41,7 @@ def voc_ap(rec, prec):
     return ap
 
 
-def cluttered_mnist_eval(test_image_object, data_directory, num_images, num_classes=11, ovthresh=0.4):
+def cluttered_mnist_eval(test_image_object, data_directory, names, num_classes=11, ovthresh=0.4):
     """
     Evalulates predicted detections on cluttered MNIST dataset
     :param test_image_object: array, obj[cls][image] = N x 5 [x1, y1, x2, y2, cls_score]
@@ -51,10 +51,10 @@ def cluttered_mnist_eval(test_image_object, data_directory, num_images, num_clas
     """
     # Get Ground Truth numbers for classes
     total_num = np.zeros([num_classes])
+    
     print('Loading Ground Truth Data to count number of ground truth per class')
-    for x in tqdm(range(num_images)):  # number of test data
-        key = 'img' + str(x)
-        gt_boxes = np.loadtxt(data_directory + 'Annotations/' + key + '.txt', ndmin=2)
+    for x in tqdm(range(len(names))):  # number of test data
+        gt_boxes = np.loadtxt(data_directory + 'Annotations/' + names[x] + '.txt', ndmin=2)
         for g in range(gt_boxes.shape[0]):
             label = int(gt_boxes[g, 4])
             total_num[label] += 1
@@ -100,8 +100,8 @@ def cluttered_mnist_eval(test_image_object, data_directory, num_images, num_clas
 
             # Get ground truth
             img_indx = int(all_dets[d, 1])
-            key = 'img' + str(img_indx)
-            gt_boxes = np.loadtxt(data_directory + '/Annotations/' + key + '.txt', ndmin=2)
+            
+            gt_boxes = np.loadtxt(data_directory + '/Annotations/' + names[img_indx] + '.txt', ndmin=2)
 
             # Store proposal dets as bb and ground truth as bbgt
             bbgt = gt_boxes[:, :4]
