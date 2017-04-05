@@ -5,6 +5,7 @@
 *__pycache__
 build/*
 Logs/*
+Data/clutteredMNIST/*
 Data/data_clutter/*
 Data/data_trans/*
 Data/MNIST/*
