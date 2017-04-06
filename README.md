@@ -9,12 +9,13 @@ The deep models in this implementation are built on [TensorBase](https://github.
 1. [Requirements: Software](#requirements-software)
 2. [Installation](#installation)
 3. [Repo Organization](#repo-organization) 
-4. [Training and Testing](#training-and-testing)
+4. [Simple Demo](#simple-demo)
+5. [Training and Testing Your Data](#training-and-testing-your-data)
 
 
 ### Requirements: Software
 1. Ubuntu 16: I haven't tested it on any other Linux distributions or versions, but there's a chance it might work as is. Let me know if it does!
-2. Python 3.5: I recommend Anaconda for your Python distribution and package management. Make sure to have Python 3.5, as 3.6 is not currently supported by TensorFlow. See (3) below.
+2. Python 3.5: I recommend Anaconda for your Python distribution and package management. See (3) below.
 3. TensorFlow v1.0: See [TensorFlow Installation with Anaconda](https://www.tensorflow.org/install/install_linux#InstallingAnaconda). Specifiy Python 3.5 when creating your Conda environment:
   ```Shell
   # Create a Conda environment for TensorFlow v1.0 with Python 3.5
@@ -60,34 +61,74 @@ The deep models in this implementation are built on [TensorBase](https://github.
 
 
 ### Repo Organization
-- Data: Scripts for creating, downloading, organizing datasets. For your local copy, the actual data will also reside here
+- Data: Scripts for creating, downloading, organizing datasets. Output detections are saved here. For your local copy, the actual data will also reside here
 - Development: Experimental code still in development
 - Lib: Library functions necessary to run Faster R-CNN
+- Logs: Holds the tfevents files for TensorBoard, model checkpoints for restoring, and validation/test logs. This directory is created the first time you run a model.
 - Models: Runnable files that create a Faster R-CNN class with a specific convolutional network and dataset. Config files for changing model parameters are also here.
 - Networks: Neural networks or components that form parts of a Faster R-CNN network
 
 
-### Training and Testing
-If you would like to try training and/or testing the Faster R-CNN network, we currently have models available for translated and cluttered MNIST. Translated MNIST is an MNIST digit embedded into a larger black image. Cluttered MNIST is the same, but with random pieces of other MNIST digits scattered throughout. Both serve as simple datasets for detection, as the algorithm must find the digit and classify it.
+### Simple Demo
+If you would like to try training and/or testing the Faster R-CNN network, we currently have a model available for cluttered MNIST. Cluttered MNIST is a dataset of images consisting of randomly scaled MNIST digits embedded in a larger image, with random pieces of other MNIST digits scattered throughout. It serves as a simple dataset for detection, as the algorithm must find the digit and classify it. PASCAL VOC and MS COCO on the way.
 
-To run one of these models (we'll use cluttered MNIST, since it's more interesting):
+To run the model:
 
 1. Generate the data:
   ```Shell
   cd $tf-FRC_ROOT/Data/scripts
   
-  # Generate images and bounding box data; place it in the folder $tf-FRC_ROOT/Data/data_clutter 
+  # Generate images and bounding box data; place it in the folder $tf-FRC_ROOT/Data/clutteredMNIST 
   python MNIST.py
   ```
 2. Run the model:
   ```Shell
   cd $tf-FRC_ROOT/Models
   
-  # Change flags accordingly
-  python faster_rcnn_clutter.py -n [Model num, ex 1] -e [Num of epochs, ex 3]
+  # Change flags accordingly (see argparser in main() of Model/faster_rcnn_conv5.py file)
+  python faster_rcnn_conv5.py -n [Model num, ex 1] -e [Num of epochs, ex 5]
   ```
   
 3. To reload a previously trained model and test
   ```Shell
-  python faster_rcnn_clutter.py -r 1 -m [Model num] -f [epoch to restore] -t 0
+  # For just mAP and AP performance metrics:
+  python faster_rcnn_conv5.py -r 1 -m [Model num] -f [epoch to restore] -t 0
+
+  # To also save test images with overlaid detection boxes as PNGs:
+  python faster_rcnn_conv5.py -r 1 -m [Model num] -f [epoch to restore] -t 0 -i 1
   ```
+
+### Training and Testing Your Data
+In order to train (and then test) on your own data:
+
+#### Organize your data into the following format:
+  ```Shell
+  |--tf-Faster-RCNN_ROOT
+      |--Data/
+	  |--[YOUR_DATASET]/
+  	      |--Annotations/
+	          |--*.txt (Annotation Files: (x1,y1,x2,y2,label))
+    	      |--Images/
+	          |--*.png (Image files)
+	      |--Names/
+  	          |--train.txt (List of training data filenames)
+		  |--valid.txt (List of validation data filenames)
+		  |--test.txt  (List of testing data filenames)
+
+  ```
+
+Step 1 of the [cluttered MNIST demo](#simple-demo) automatically creates this data and organizes it accordingly, so run the `MNIST.py` script for an example file structure.
+
+#### Configure the model
+The network architecture and model parameters depend on the kind of data you are trying to process. Much of the network architecture and many of the model parameters are adjustable from the config file. 
+
+Default settings and their descriptions are located at [Lib/fast_rcnn_config.py](https://github.com/kevinjliang/tf-Faster-RCNN/blob/master/Lib/fast_rcnn_config.py). You should not modify this. Instead, write a yaml file, save it under Models/cfgs, and pass it as an argument to your model. See [Models/cfgs/clutteredMNIST.yml](https://github.com/kevinjliang/tf-Faster-RCNN/blob/master/Models/cfgs/clutteredMNIST.yml) as an example.
+
+In particular, make sure to change the following:
+- Point `DATA_DIRECTORY` to your dataset folder (denoted by [YOUR_DATASET] in the earlier file tree). Make this path relative to the Models directory.
+- Change `CLASSES` to a list of the class names in your data. IMPORTANT: Leave the first class as '__background__'
+- Update `NUM_CLASSES` to the number of classes have in `CLASSES`
+
+#### Train and Test
+...to be continued (see demo for now)
+

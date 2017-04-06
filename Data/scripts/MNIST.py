@@ -4,7 +4,17 @@
 @author: Dan Salo + Kevin Liang, Jan 2017
 Original code by @kevinjliang
 
-Purpose: Create a cluttered MNIST dataset 
+Purpose: Create a cluttered MNIST dataset
+
+|--tf-Faster-RCNN_ROOT
+    |--Data/
+        |--clutteredMNIST/
+            |--Annotations/
+                |--*.txt (Annotation Files: (x1,y1,x2,y2,l))
+            |--Images/
+                |--*.png (Image files)
+            |--Names/
+                |--[train/valid/test].txt (List of data)
 """
 
 from tensorflow.examples.tutorials.mnist import input_data
