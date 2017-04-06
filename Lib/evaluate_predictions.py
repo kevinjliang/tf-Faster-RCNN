@@ -3,9 +3,9 @@
 """
 Created on Tue Jan 31 12:19:01 2017
 
-@author: Daniel Salo (Modifications)
+@author: Daniel Salo, Kevin Liang (Modifications)
 
-Functions for testing Faster RCNN net on Cluttered MNIST and getting Mean Average Precision
+Functions for testing Faster RCNN net and getting Mean Average Precision
 """
 
 # --------------------------------------------------------
@@ -15,13 +15,16 @@ Functions for testing Faster RCNN net on Cluttered MNIST and getting Mean Averag
 # Written by Ross Girshick
 # --------------------------------------------------------
 
+
+from .fast_rcnn_config import cfg
+
 import numpy as np
 from tqdm import tqdm
 
 
-def voc_ap(rec, prec):
-    """ ap = voc_ap(rec, prec, [use_07_metric])
-    Compute VOC AP given precision and recall.
+def calc_ap(rec, prec):
+    """ ap = calc_ap(rec, prec, [use_07_metric])
+    Compute AP given precision and recall.
     """
     # correct AP calculation
     # first append sentinel values at the end
@@ -41,30 +44,32 @@ def voc_ap(rec, prec):
     return ap
 
 
-def cluttered_mnist_eval(test_image_object, data_directory, names, num_classes=11, ovthresh=0.4):
+def evaluate_predictions(test_image_object, data_directory, names, ovthresh=0.4):
     """
-    Evalulates predicted detections on cluttered MNIST dataset
+    Evaluates predicted detections 
     :param test_image_object: array, obj[cls][image] = N x 5 [x1, y1, x2, y2, cls_score]
-    :param data_directory: str, location of the evaluation folder. Should end with "../Test/" or "../Valid/".
+    :param data_directory: str, location of the evaluation folder. 
     :param ovthresh: float, between 1 and 0, threshold for rejecting bbox
-    :return: class_metrics: list, each index is a digit class which holds a tuple of rec, prec, and ap
+    :return: class_metrics: list of the APs of each class
     """
     # Get Ground Truth numbers for classes
-    total_num = np.zeros([num_classes])
+    total_num = np.zeros([cfg.NUM_CLASSES])
+    
+    # Labeled dict holds booleans for whether an object/gt_bbox has been counted yet
+    labeled = {}
     
     print('Loading Ground Truth Data to count number of ground truth per class')
-    for x in tqdm(range(len(names))):  # number of test data
-        gt_boxes = np.loadtxt(data_directory + 'Annotations/' + names[x] + '.txt', ndmin=2)
+    for name in tqdm(names):  # number of test data
+        gt_boxes = np.loadtxt(data_directory + 'Annotations/' + name + '.txt', ndmin=2)
+        labeled[name] = []
         for g in range(gt_boxes.shape[0]):
             label = int(gt_boxes[g, 4])
+            labeled[name].append(False)
             total_num[label] += 1
-    print('Total Number of Images per class:')
-    print(total_num)
+    print('Total Number of Objects per class: \n{0}'.format(total_num))
 
-    # Define class_metrics list
-    # Labels array holds booleans as to whether an image/gt has been counted yet
-    class_metrics = list()
-    labels = [False] * np.sum(total_num).astype(int)
+    # Define class_metrics list (skip background)
+    class_metrics = np.zeros([cfg.NUM_CLASSES - 1])
 
     # Calculate IoU for all classes and all images
     for c in range(1, len(test_image_object)):  # loop through all classes (skip background class)
@@ -83,9 +88,10 @@ def cluttered_mnist_eval(test_image_object, data_directory, names, num_classes=1
         if len(all_dets.shape) == 2:
             confidence = [score for score in all_dets[:, 0]]
         else:
-            print('All Dets not right shape.')
-            class_metrics = np.zeros([num_classes]).tolist()
-            return class_metrics
+            print('No detections for class {0}'.format(cfg.CLASSES[c]))
+            class_metrics[c-1] = 0
+            continue
+        
         confidence = np.array(confidence)
         indx = np.argsort(-confidence)
         all_dets = all_dets[indx, :]
@@ -97,14 +103,19 @@ def cluttered_mnist_eval(test_image_object, data_directory, names, num_classes=1
 
         # go down dets and mark TPs and FPs
         for d in range(nd):  # loop through all detections
-
             # Get ground truth
             img_indx = int(all_dets[d, 1])
-            
-            gt_boxes = np.loadtxt(data_directory + '/Annotations/' + names[img_indx] + '.txt', ndmin=2)
+            name = names[img_indx]
+            gt_boxes = np.loadtxt(data_directory + '/Annotations/' + name + '.txt', ndmin=2)
 
+            # Identify the gt_bboxes that match the class (c) being tested
+            matches = np.where(gt_boxes[:, 4] == c)[0]
+            if len(matches) == 0:
+                fp[d] = 1
+                continue
+            
             # Store proposal dets as bb and ground truth as bbgt
-            bbgt = gt_boxes[:, :4]
+            bbgt = gt_boxes[matches, :4]
             bb = all_dets[d, 2:6]
 
             # compute intersection
@@ -124,25 +135,26 @@ def cluttered_mnist_eval(test_image_object, data_directory, names, num_classes=1
             # computer IoU
             overlaps = inters / uni
             ovmax = np.max(overlaps)
+            ovargmax = np.argmax(overlaps)
 
             # Threshold
             if ovmax > ovthresh:
-                if labels[img_indx] is False:  # ensure no ground truth box is double counted
+                if labeled[name][ovargmax] is False:  # ensure no ground truth box is double counted
                     tp[d] = 1
-                    labels[img_indx] = True
+                    labeled[name][ovargmax] = True
                 else:
                     fp[d] = 1
             else:
-                fp[d] = 1.
+                fp[d] = 1
 
         # compute recall and precision
         cum_fp = np.cumsum(fp)
         cum_tp = np.cumsum(tp)
         rec = cum_tp / float(total_num[c])
         prec = cum_tp / np.maximum(cum_tp + cum_fp, np.finfo(np.float64).eps)  # avoid divide by zero
-
+        
         # compute average precision and store
-        ap = voc_ap(rec, prec)
-        class_metrics.append(ap)
-    print('Mean Average Precision: %f' % np.mean(class_metrics))
+        ap = calc_ap(rec, prec)
+        class_metrics[c-1] = ap
+
     return class_metrics

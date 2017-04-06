@@ -16,7 +16,7 @@ Functions for testing Faster RCNN net after it's been trained
 # --------------------------------------------------------
 
 from .bbox_transform import clip_boxes, bbox_transform_inv
-from .Datasets.eval_clutteredMNIST import cluttered_mnist_eval # TODO: Find a way to make this generalized
+from .evaluate_predictions import evaluate_predictions
 from .fast_rcnn_config import cfg
 
 import matplotlib
@@ -224,6 +224,6 @@ def test_net(data_directory, names, sess, tf_inputs, tf_outputs, max_per_image=3
     with open(det_file, 'wb') as f:
         pickle.dump(all_boxes, f)
 
-    class_metrics = cluttered_mnist_eval(all_boxes, data_directory, names, num_classes)
+    class_metrics = evaluate_predictions(all_boxes, data_directory, names)
         
     return class_metrics

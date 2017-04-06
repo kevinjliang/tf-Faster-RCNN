@@ -11,7 +11,6 @@ Reorganizing a few things relative to faster_rcnn_conv5
 """
 
 import sys
-
 sys.path.append('../')
 
 from Lib.TensorBase.tensorbase.base import Model, Data
@@ -188,10 +187,15 @@ class FasterRcnnConv5(Model):
         self.record_eval_metrics(class_metrics, key)
         
 
-    def record_eval_metrics(self, class_metrics, key):
+    def record_eval_metrics(self, class_metrics, key, display_APs=True):
         """ Record evaluation metrics and print to log and terminal """
+        if display_APs:
+            for c in range(1,cfg.NUM_CLASSES):
+                self.print_log("Average Precision for class {0}: {1:.5}".format(cfg.CLASSES[c], class_metrics[c-1]))
+        
         mAP = np.mean(class_metrics)
         self.print_log("Mean Average Precision on " + key + " Set: %f" % mAP)
+        
         fname = self.flags['logging_directory'] + key + '_Accuracy.txt'
         if os.path.isfile(fname):
             self.print_log("Appending to " + key + " file")
