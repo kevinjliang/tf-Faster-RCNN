@@ -210,9 +210,6 @@ __C.MODEL_DIRECTORY = 'FRCNN/'
 # TF Slim restore file for resnet50
 __C.RESTORE_SLIM_FILE = ""
 
-# Number of images in each data split
-__C.NUM_IMAGES = {'TRAIN': 0, 'VALID': 0, 'TEST': 0}
-
 # How often to save TensorFlow checkpoint of model parameters (epochs)
 __C.CHECKPOINT_RATE = 1 
 # How often to evaluate on the validation set (epochs)

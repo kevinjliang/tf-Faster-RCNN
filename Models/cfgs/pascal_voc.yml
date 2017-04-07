@@ -1,0 +1,19 @@
+DATA_DIRECTORY: '../Data/Pascal_VOC/'
+MODEL_DIRECTORY: 'pascal_voc/'
+RESTORE_SLIM_FILE: '../../Data/ResNet50/resnet_v1_50.ckpt'
+
+CLASSES: ['__background__', 
+          'aeroplane', 'bicycle', 'bird', 'boat',
+          'bottle', 'bus', 'car', 'cat', 'chair',
+          'cow', 'diningtable', 'dog', 'horse',
+          'motorbike', 'person', 'pottedplant',
+          'sheep', 'sofa', 'train', 'tvmonitor']
+NUM_CLASSES: 21
+
+DISPLAY_RATE: 1000
+
+TRAIN:
+  LEARNING_RATE: 0.0003
+
+TEST:
+  RPN_NMS_THRESH: 0.5
