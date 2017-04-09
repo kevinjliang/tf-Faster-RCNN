@@ -70,9 +70,9 @@ The deep models in this implementation are built on [TensorBase](https://github.
 
 
 ## Simple Demo
-If you would like to try training and/or testing the Faster R-CNN network, we currently have a model available for cluttered MNIST. Cluttered MNIST is a dataset of images consisting of randomly scaled MNIST digits embedded in a larger image, with random pieces of other MNIST digits scattered throughout. It serves as a simple dataset for detection, as the algorithm must find the digit and classify it. PASCAL VOC and MS COCO on the way.
+If you would like to try training and/or testing the Faster R-CNN network, we currently have a complete model available for cluttered MNIST. Cluttered MNIST is a dataset of images consisting of randomly scaled MNIST digits embedded in a larger image, with random pieces of other MNIST digits scattered throughout. It serves as a simple dataset for detection, as the algorithm must find the digit and classify it. PASCAL VOC and MS COCO on the way.
 
-To run the model:
+To run the model on cluttered MNIST:
 
 1. Generate the data:
   ```Shell
@@ -112,7 +112,7 @@ In order to train (and then test) on your own data:
           |--*.png (Image files)
         |--Names/
           |--train.txt (List of training data filenames)
-  	  |--valid.txt (List of validation data filenames)
+          |--valid.txt (List of validation data filenames)
           |--test.txt  (List of testing data filenames)
 
   ```
@@ -128,6 +128,9 @@ In particular, make sure to change the following:
 - Point `DATA_DIRECTORY` to your dataset folder (denoted by [YOUR_DATASET] in the earlier file tree). Make this path relative to the [Models/](https://github.com/kevinjliang/tf-Faster-RCNN/tree/master/Models) directory.
 - Change `CLASSES` to a list of the class names in your data. IMPORTANT: Leave the first class as '__background__'
 - Update `NUM_CLASSES` to the number of classes in `CLASSES`
+
+The model file you use depends on the data you wish to train on. For something like the simple, single-channeled cluttered MNIST, [Model/faster_rcnn_conv5.py](https://github.com/kevinjliang/tf-Faster-RCNN/blob/master/Models/faster_rcnn_conv5.py) is probably sufficient. More complex, RGB-channeled real data like PASCAL VOC, MS COCO, or ImageNet require a correspondingly more advanced architecture ([example](https://github.com/kevinjliang/tf-Faster-RCNN/blob/master/Models/faster_rcnn_resnet50ish.py)).
+
 
 #### Train and Test
 ...to be continued (see demo for now)
