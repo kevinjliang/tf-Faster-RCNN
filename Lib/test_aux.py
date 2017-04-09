@@ -137,7 +137,7 @@ def test_net(data_directory, names, sess, tf_inputs, tf_outputs, max_per_image=3
             |--Annotations/
                 |--*.txt (Annotation Files: (x1,y1,x2,y2,l))
             |--Images/
-                |--*.png (Image files)
+                |--*.[png/jpg] (Image files)
             |--Names/
                 |--[train/valid/test].txt (List of data)
     names: list of data files (contents of the above [train/valid/test].txt file)             
@@ -168,7 +168,7 @@ def test_net(data_directory, names, sess, tf_inputs, tf_outputs, max_per_image=3
     print('Detecting boxes in images:')
     for i in tqdm(range(num_images)):
         # Read in file
-        im_file = data_directory + 'Images/' + names[i] + '.png'  
+        im_file = data_directory + 'Images/' + names[i] + cfg.IMAGE_FORMAT 
         image = imread(im_file)
         
         # Perform Detection
@@ -211,7 +211,7 @@ def test_net(data_directory, names, sess, tf_inputs, tf_outputs, max_per_image=3
             dets = np.array(dets)
             cls = np.array(cls)
 
-            im_file = data_directory + 'Images/' + names[i] + '.png'  
+            im_file = data_directory + 'Images/' + names[i] + cfg.IMAGE_FORMAT 
             image = imread(im_file)
 
             gt = np.loadtxt(data_directory + 'Annotations/' + names[i] + '.txt', ndmin=2)

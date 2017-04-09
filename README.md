@@ -109,7 +109,7 @@ In order to train (and then test) on your own data:
         |--Annotations/
           |--*.txt (Annotation Files: (x1,y1,x2,y2,label))
         |--Images/
-          |--*.png (Image files)
+          |--*.[png/jpg] (Image files)
         |--Names/
           |--train.txt (List of training data filenames)
           |--valid.txt (List of validation data filenames)

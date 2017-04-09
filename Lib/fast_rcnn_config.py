@@ -210,6 +210,9 @@ __C.MODEL_DIRECTORY = 'FRCNN/'
 # TF Slim restore file for resnet50
 __C.RESTORE_SLIM_FILE = ""
 
+# Image file format ('.png', '.jpg')
+__C.IMAGE_FORMAT = '.png'
+
 # How often to save TensorFlow checkpoint of model parameters (epochs)
 __C.CHECKPOINT_RATE = 1 
 # How often to evaluate on the validation set (epochs)

@@ -2,6 +2,8 @@ DATA_DIRECTORY: '../Data/Pascal_VOC/'
 MODEL_DIRECTORY: 'pascal_voc/'
 RESTORE_SLIM_FILE: '../../Data/ResNet50/resnet_v1_50.ckpt'
 
+IMAGE_FORMAT: '.jpg'
+
 CLASSES: ['__background__', 
           'aeroplane', 'bicycle', 'bird', 'boat',
           'bottle', 'bus', 'car', 'cat', 'chair',

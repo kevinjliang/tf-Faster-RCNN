@@ -28,7 +28,7 @@ def create_feed_dict(data_directory, names, tf_inputs, image_index):
             |--Annotations/
                 |--*.txt (Annotation Files: (x1,y1,x2,y2,l))
             |--Images/
-                |--*.png (Image files)
+                |--*.[png/jpg] (Image files)
             |--Names/
                 |--[train/valid/test].txt (List of data)
     names: list of data files (contents of the above [train/valid/test].txt file, returned by read_names)
@@ -39,7 +39,7 @@ def create_feed_dict(data_directory, names, tf_inputs, image_index):
     image_index: the index of the image the feed_dict is being crated for
     '''
     # Data filenames
-    image_file = data_directory + 'Images/' + names[image_index] + '.png'
+    image_file = data_directory + 'Images/' + names[image_index] + cfg.IMAGE_FORMAT
     annotation_file = data_directory + 'Annotations/' + names[image_index] + '.txt'
 
     # Read data
