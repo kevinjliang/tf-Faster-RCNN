@@ -190,7 +190,7 @@ def test_net(data_directory, names, sess, tf_inputs, tf_outputs, max_per_image=3
     # Ensure that at least some detections were made
     if not detection_made:
         print("No detections were made")
-        return [[0]]
+        return [0.0]*num_classes
     
     # Create output directory
     det_dir = data_directory + 'Outputs/'
