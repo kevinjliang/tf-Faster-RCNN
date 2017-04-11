@@ -118,24 +118,8 @@ def evaluate_predictions(test_image_object, data_directory, names, ovthresh=0.4)
             bbgt = gt_boxes[matches, :4]
             bb = all_dets[d, 2:6]
 
-            # compute intersection
-            ixmin = np.maximum(bbgt[:, 0], bb[0])
-            iymin = np.maximum(bbgt[:, 1], bb[1])
-            ixmax = np.minimum(bbgt[:, 2], bb[2])
-            iymax = np.minimum(bbgt[:, 3], bb[3])
-            iw = np.maximum(ixmax - ixmin + 1., 0.)
-            ih = np.maximum(iymax - iymin + 1., 0.)
-            inters = iw * ih
-
-            # compute union
-            uni = ((bb[2] - bb[0] + 1.) * (bb[3] - bb[1] + 1.) +
-                   (bbgt[:, 2] - bbgt[:, 0] + 1.) *
-                   (bbgt[:, 3] - bbgt[:, 1] + 1.) - inters)
-
-            # computer IoU
-            overlaps = inters / uni
-            ovmax = np.max(overlaps)
-            ovargmax = np.argmax(overlaps)
+            # Compute Intersection Over Union
+            ovmax, ovargmax = compute_iou(bbgt, bb)
 
             # Threshold
             if ovmax > ovthresh:
@@ -158,3 +142,27 @@ def evaluate_predictions(test_image_object, data_directory, names, ovthresh=0.4)
         class_metrics[c-1] = ap
 
     return class_metrics
+
+def compute_iou(bbgt, bb):
+    """ Computes the Intersection Over Union for a bounding box (bb) and a set of ground truth boxes (bbgt) """
+
+    # compute intersection
+    ixmin = np.maximum(bbgt[:, 0], bb[0])
+    iymin = np.maximum(bbgt[:, 1], bb[1])
+    ixmax = np.minimum(bbgt[:, 2], bb[2])
+    iymax = np.minimum(bbgt[:, 3], bb[3])
+    iw = np.maximum(ixmax - ixmin + 1., 0.)
+    ih = np.maximum(iymax - iymin + 1., 0.)
+    inters = iw * ih
+
+    # compute union
+    uni = ((bb[2] - bb[0] + 1.) * (bb[3] - bb[1] + 1.) +
+           (bbgt[:, 2] - bbgt[:, 0] + 1.) *
+           (bbgt[:, 3] - bbgt[:, 1] + 1.) - inters)
+
+    # computer IoU
+    overlaps = inters / uni
+    ovmax = np.max(overlaps)
+    ovargmax = np.argmax(overlaps)
+
+    return ovmax, ovargmax
