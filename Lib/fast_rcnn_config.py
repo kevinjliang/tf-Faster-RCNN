@@ -220,6 +220,9 @@ __C.VALID_RATE = 1
 # How often to show training losses (iterations)
 __C.DISPLAY_RATE = 250
 
+# Include objects labeled as "difficult" (PASCAL VOC)
+__C.USE_DIFFICULT = False
+
 
 
 ###############################################################################

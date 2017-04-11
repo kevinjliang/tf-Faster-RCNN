@@ -10,5 +10,7 @@ Data/data_clutter/*
 Data/data_trans/*
 Data/MNIST/*
 Data/MNIST_data/*
+Data/pascal_voc*
+Data/VOCdevkit*
 .ipynb_checkpoints
 *HRI*
