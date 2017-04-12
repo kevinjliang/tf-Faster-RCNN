@@ -30,7 +30,7 @@ import tensorflow as tf
 
 # Global Flag Dictionary
 flags = {
-    'data_directory': '/home/kd/Documents/Data/clutteredMNIST/',
+    'data_directory': '../clutteredMNIST/',
     'nums': {"train": 55000, "valid": 5000, "test": 10000},
     'all_names': ["train", "valid", "test"],
     'num_classes': 10,
