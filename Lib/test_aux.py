@@ -30,7 +30,7 @@ from scipy.misc import imread
 from tqdm import tqdm
 
 
-def test_net(data_directory, names, sess, tf_inputs, tf_outputs, max_per_image=300, thresh=0.1, vis=False):
+def test_net(data_directory, names, sess, tf_inputs, tf_outputs, max_per_image=300, key='valid', thresh=0.1, vis=False):
     """Test a Fast R-CNN network on an image database.
     
     data_directory: Directory to the data. Should be organized as follows:
@@ -66,7 +66,7 @@ def test_net(data_directory, names, sess, tf_inputs, tf_outputs, max_per_image=3
 
     # Check for detections already. If they don't exists or if user wants to overwrite, then detect_boxes()
     det_file = det_dir + 'detections.pkl'
-    if os.path.exists(det_file):
+    if os.path.exists(det_file) and key == 'test':
         overwrite = input('Saved detections were .. detected. Would you like to overwrite? [y/n]')
         if overwrite == 'y':
             # Detect boxes
