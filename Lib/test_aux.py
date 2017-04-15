@@ -66,13 +66,18 @@ def test_net(data_directory, names, sess, tf_inputs, tf_outputs, max_per_image=3
 
     # Check for detections already. If they don't exists or if user wants to overwrite, then detect_boxes()
     det_file = det_dir + 'detections.pkl'
-    if os.path.exists(det_file) and key == 'test':
+    if os.path.exists(det_file) and key == 'TEST':
         overwrite = input('Saved detections were .. detected. Would you like to overwrite? [y/n]')
         if overwrite == 'y':
             # Detect boxes
             print('Detecting boxes in images:')
             all_boxes, detection_made = detect_boxes(num_images, num_classes, data_directory, names, sess, tf_inputs,
                                                      tf_outputs, thresh)
+            # Save detections
+            det_file = det_dir + 'detections.pkl'
+            with open(det_file, 'wb') as f:
+                pickle.dump(all_boxes, f)
+
         else:
             # Load boxes from pickle file
             print('Loading boxes from %s' % det_file)
@@ -83,6 +88,10 @@ def test_net(data_directory, names, sess, tf_inputs, tf_outputs, max_per_image=3
         print('Detecting boxes in images:')
         all_boxes, detection_made = detect_boxes(num_images, num_classes, data_directory, names, sess, tf_inputs,
                                                  tf_outputs, thresh)
+        # Save detections
+        det_file = det_dir + 'detections.pkl'
+        with open(det_file, 'wb') as f:
+            pickle.dump(all_boxes, f)
 
     # Ensure that at least some detections were made
     if not detection_made:
@@ -115,11 +124,6 @@ def test_net(data_directory, names, sess, tf_inputs, tf_outputs, max_per_image=3
 
             # Visualize detections
             vis_detections(image, gt, dets, cls, outputPNGfilename)
-
-    # Save detections    
-    det_file = det_dir + 'detections.pkl'
-    with open(det_file, 'wb') as f:
-        pickle.dump(all_boxes, f)
 
     class_metrics = evaluate_predictions(all_boxes, data_directory, names)
         

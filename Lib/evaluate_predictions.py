@@ -107,25 +107,20 @@ def evaluate_predictions(test_image_object, data_directory, names, ovthresh=0.4)
             img_indx = int(all_dets[d, 1])
             name = names[img_indx]
             gt_boxes = np.loadtxt(data_directory + '/Annotations/' + name + '.txt', ndmin=2)
-
-            # Identify the gt_bboxes that match the class (c) being tested
-            matches = np.where(gt_boxes[:, 4] == c)[0]
-            if len(matches) == 0:
-                fp[d] = 1
-                continue
             
             # Store proposal dets as bb and ground truth as bbgt
-            bbgt = gt_boxes[matches, :4]
+            bbgt = gt_boxes[:, :4]
             bb = all_dets[d, 2:6]
+            classes = gt_boxes[:, 4]
 
             # Compute Intersection Over Union
             ovmax, ovargmax = compute_iou(bbgt, bb)
 
             # Threshold
-            if ovmax > ovthresh:
+            if ovmax > ovthresh and c == classes[ovargmax]:
                 if labeled[name][ovargmax] is False:  # ensure no ground truth box is double counted
                     tp[d] = 1
-                    labeled[name][ovargmax] = True
+                    labeled[name][ovargmax] = True  # This is problematic.
                 else:
                     fp[d] = 1
             else:
@@ -136,12 +131,13 @@ def evaluate_predictions(test_image_object, data_directory, names, ovthresh=0.4)
         cum_tp = np.cumsum(tp)
         rec = cum_tp / float(total_num[c])
         prec = cum_tp / np.maximum(cum_tp + cum_fp, np.finfo(np.float64).eps)  # avoid divide by zero
-        
+
         # compute average precision and store
         ap = calc_ap(rec, prec)
         class_metrics[c-1] = ap
 
     return class_metrics
+
 
 def compute_iou(bbgt, bb):
     """ Computes the Intersection Over Union for a bounding box (bb) and a set of ground truth boxes (bbgt) """
