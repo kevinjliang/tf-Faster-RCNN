@@ -201,6 +201,8 @@ __C.TEST.RPN_MIN_SIZE = 16
 # MISC
 ###############################################################################
 
+# Name of dataset
+__C.DATASET_NAME = 'cluttered_mnist'
 # Relative location of data files
 __C.DATA_DIRECTORY = '../Data/'
 # Relative location of where of logging directory
@@ -222,6 +224,9 @@ __C.DISPLAY_RATE = 250
 
 # Include objects labeled as "difficult" (PASCAL VOC)
 __C.USE_DIFFICULT = False
+
+# Pixel Means for ImageNet Model
+__C.PIXEL_MEANS = np.array([[[102.9801, 115.9465, 122.7717]]])
 
 
 
