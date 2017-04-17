@@ -21,7 +21,6 @@ from Lib.fast_rcnn_config import cfg, cfg_from_file
 import argparse
 import numpy as np
 import os
-import scipy.sparse
 from tqdm import tqdm
 import xml.etree.ElementTree as ET
 
@@ -40,10 +39,18 @@ def main():
         print('Using Default settings')
     
     gen_Annotations_dir(args['year'])
+    gen_Images_dir(args['year'])
     gen_Names_dir(args['year'])
     
     
 def gen_Annotations_dir(year):
+    """
+    For each image, generate a corresponding annotations file
+    Each line represents an object/bounding box: (x1,y1,x2,y2,label)
+    
+    label is an integer index, corresponding to the indices of the CLASSES entry
+    of pascal_voc2007.yml (0 corresponds to '__background__')
+    """
     annotations_dir = '../' + cfg.DATA_DIRECTORY + 'Annotations/'
     make_directory(annotations_dir)
     
@@ -58,12 +65,24 @@ def gen_Annotations_dir(year):
             fileID = xml_file[:-4]
             np.savetxt(annotations_dir + fileID + '.txt', np.array(boxes), fmt='%i')
             
+def gen_Images_dir(year):
+    """ Just create soft link to devkit, to save space """
+    images_dir = '../' + cfg.DATA_DIRECTORY + 'Images'
+    src_dir = '../VOCdevkit' + year + '/VOC' + year + '/JPEGImages/'
+    
+    os.symlink(src_dir, images_dir)
+            
             
 def gen_Names_dir(year):
+    """ 
+    Combine original training and validation sets of PASCAL VOC into training
+    
+    Split original test into new validation and test sets (approx 1:1)
+    """    
     names_dir = '../' + cfg.DATA_DIRECTORY + 'Names/'
     make_directory(names_dir)
     
-    src_dir = '../' + cfg.DATA_DIRECTORY + '../VOCdevkit'+ year + '/VOC' + year + '/ImageSets/Main/'
+    src_dir = '../' + cfg.DATA_DIRECTORY + '../VOCdevkit' + year + '/VOC' + year + '/ImageSets/Main/'
     
     ## Convert Train list (combine train and valid)
     train_src = src_dir + 'trainval.txt'
@@ -98,6 +117,7 @@ def gen_Names_dir(year):
             else:
                 td.write(s)
 
+                
 def _load_pascal_annotation(filename, class2ind):
     """
     Load image and bounding boxes info from XML file in the PASCAL VOC

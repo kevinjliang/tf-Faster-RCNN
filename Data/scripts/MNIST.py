@@ -105,7 +105,7 @@ def gen_nCluttered(data, labels, im_dims, num_digits, clutter_rate=1):
     Args:
         data: MNIST image data (num_images, 784)
         labels: MNIST labels (num_images, )
-        im_dims: [height, weight] of output cluttered MNIST digit image
+        im_dims: [height, width] of output cluttered MNIST digit image
         num_digits: number of full MNIST digits to embed
         clutter_rate: how much to clutter background with fragments
     """
