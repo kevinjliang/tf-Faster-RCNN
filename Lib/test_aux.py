@@ -147,7 +147,10 @@ def detect_boxes(num_images, num_classes, data_directory, names, sess, tf_inputs
 
         # Read in file
         im_file = data_directory + 'Images/' + names[i] + cfg.IMAGE_FORMAT
-        image = imread(im_file)
+        im_8bit = imread(im_file)
+        if cfg.DATASET_NAME == 'pascal_voc2007':
+            image = im_8bit.astype(dtype=np.float32, copy=True)
+            image -= cfg.PIXEL_MEANS
 
         # Perform Detection
         probs, boxes = _im_detect(sess, image, tf_inputs, tf_outputs)

@@ -69,7 +69,7 @@ The deep models in this implementation are built on [TensorBase](https://github.
 - Networks: Neural networks or components that form parts of a Faster R-CNN network
 
 
-## Simple Demo
+## Cluttered MNIST Demo
 If you would like to try training and/or testing the Faster R-CNN network, we currently have a complete model available for cluttered MNIST. Cluttered MNIST is a dataset of images consisting of randomly scaled MNIST digits embedded in a larger image, with random pieces of other MNIST digits scattered throughout. It serves as a simple dataset for detection, as the algorithm must find the digit and classify it. PASCAL VOC and MS COCO on the way.
 
 To run the model on cluttered MNIST:

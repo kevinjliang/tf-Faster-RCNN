@@ -1,4 +1,5 @@
-DATA_DIRECTORY: '../Data/clutteredMNIST/'
+DATASET_NAME: 'cluttered_mnist'
+DATA_DIRECTORY: '/home/kd/Documents/Data/clutteredMNIST/'
 MODEL_DIRECTORY: 'mnist/'
 
 CLASSES: ['__background__', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0']

@@ -1,6 +1,7 @@
+DATASET_NAME: 'pascal_voc2007'
 DATA_DIRECTORY: '../Data/pascal_voc2007/'
 MODEL_DIRECTORY: 'pascal_voc2007/'
-RESTORE_SLIM_FILE: '../../Data/ResNet50/resnet_v1_50.ckpt'
+RESTORE_SLIM_FILE: '../Data/ResNet50/resnet_v1_50.ckpt'
 
 IMAGE_FORMAT: '.jpg'
 
@@ -16,6 +17,8 @@ DISPLAY_RATE: 1000
 
 TRAIN:
   LEARNING_RATE: 0.0003
+  LEARNING_RATE_DECAY: 5
+  LEARNING_RATE_DECAY_RATE: 20
 
 TEST:
   RPN_NMS_THRESH: 0.5

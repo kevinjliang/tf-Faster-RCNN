@@ -18,12 +18,12 @@ sys.path.append('../../')
 
 from Lib.fast_rcnn_config import cfg, cfg_from_file
 
+from tqdm import tqdm
 import argparse
 import numpy as np
 import os
-import scipy.sparse
-from tqdm import tqdm
 import xml.etree.ElementTree as ET
+
 
 def main():
     # Parse Arguments
@@ -33,52 +33,58 @@ def main():
     args = vars(parser.parse_args())
     
     if args['yaml'] != 'default': 
-        dictionary = cfg_from_file('../../Models/cfgs/' + args['yaml'])
+        _ = cfg_from_file('../../Models/cfgs/' + args['yaml'])
         print('Restoring from %s file' % args['yaml'])
     else:
-        dictionary = []
         print('Using Default settings')
-    
+
+    # Generate Annotations and Names folders
     gen_Annotations_dir(args['year'])
     gen_Names_dir(args['year'])
     
     
 def gen_Annotations_dir(year):
-    annotations_dir = '../' + cfg.DATA_DIRECTORY + 'Annotations/'
+    """ Generate Annotations folder with txt files """
+
+    # Make Annotations directory
+    annotations_dir = cfg.DATA_DIRECTORY + 'Annotations/'
     make_directory(annotations_dir)
     
-    src_dir = '../' + cfg.DATA_DIRECTORY + '../VOCdevkit' + year + '/VOC' + year + '/Annotations/'
+    src_dir = cfg.DATA_DIRECTORY + '/VOCdevkit' + year + '/VOC' + year + '/Annotations/'
     
     class2ind = dict(zip(cfg.CLASSES, range(cfg.NUM_CLASSES)))
-    
+
     # Load all annotations and convert to the appropriate form
     for xml_file in tqdm(os.listdir(src_dir)):
         if os.path.isfile(src_dir + xml_file):
             boxes = _load_pascal_annotation(src_dir + xml_file, class2ind)
-            fileID = xml_file[:-4]
+            fileID = xml_file[:-4]  # clip .xml from the end
             np.savetxt(annotations_dir + fileID + '.txt', np.array(boxes), fmt='%i')
             
             
 def gen_Names_dir(year):
-    names_dir = '../' + cfg.DATA_DIRECTORY + 'Names/'
+    """
+    Converts training and training_validation sets of original PASCAL VOC into tf-FRCNN train set.
+    Splits validation of original PASCAL VOC into tf-FRCNN validation and test set.
+    """
+    names_dir = cfg.DATA_DIRECTORY + 'Names/'
     make_directory(names_dir)
     
-    src_dir = '../' + cfg.DATA_DIRECTORY + '../VOCdevkit'+ year + '/VOC' + year + '/ImageSets/Main/'
+    src_dir = cfg.DATA_DIRECTORY + 'VOCdevkit' + year + '/VOC' + year + '/ImageSets/Main/'
     
-    ## Convert Train list (combine train and valid)
+    # Convert tf-FRCNN train set
     train_src = src_dir + 'trainval.txt'
     train_dest = names_dir + 'train.txt'
     
     # Clobber the old names file
     delete_file(train_dest)
-    
+
     with open(train_src) as s, open(train_dest, 'a') as d:
         for line in tqdm(s):
-            s = line# [:-4] # Strip off the ' -1\n'
+            s = line
             d.write(s)
             
-            
-    ## Convert Test (split test into test and valid)
+    # Convert tf-FRCNN valid/test set (split original PASCAL val into test and valid)
     test_src = src_dir + 'test.txt'
     
     valid_dest = names_dir + 'valid.txt'
@@ -90,13 +96,14 @@ def gen_Names_dir(year):
     
     with open(test_src) as s, open(valid_dest, 'a') as vd, open(test_dest, 'a') as td:
         for line in tqdm(s):
-            s = line#[:-4] # Strip off the ' -1\n'
+            s = line
             
             # Randomly assign to valid and test according to split:
             if np.random.binomial(1, 0.5):
                 vd.write(s)
             else:
                 td.write(s)
+
 
 def _load_pascal_annotation(filename, class2ind):
     """

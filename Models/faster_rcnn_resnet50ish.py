@@ -41,7 +41,7 @@ class FasterRcnnRes50(Model):
         self.epoch = flags_input['file_epoch'] if flags_input['restore'] else 0
         self.lr = flags['learning_rate']    
 
-        super().__init__(flags_input, flags_input['run_num'], vram=0.8, restore=flags_input['restore_num'], restore_slim=flags_input['restore_slim_file'])
+        super().__init__(flags_input, flags_input['run_num'], vram=0.5, restore=flags_input['restore_num'], restore_slim=flags_input['restore_slim_file'])
    
         self.print_log(dictionary)
         self.print_log(flags_input)
@@ -157,10 +157,13 @@ class FasterRcnnRes50(Model):
         self.step += 1
         for self.epoch in trange(1, self.flags['num_epochs']+1, desc='epochs'):
             train_order = randomize_training_order(len(self.names['TRAIN']))
-            
+
             for i in tqdm(train_order):
+                if i in [1430, 3287, 4667]:  # These are severely small rectangular Pascal VOC Images
+                    continue
+
                 feed_dict = create_feed_dict(flags['data_directory'], self.names['TRAIN'], tf_inputs, i)
-                
+
                 # Run a training iteration
                 if self.step % (self.flags['display_step']) == 0:
                     # Record training metrics every display_step interval
@@ -244,7 +247,7 @@ def update_flags():
     
         
 def main():
-    flags['seed'] = 1234
+    flags['seed'] = 125
 
     # Parse Arguments
     parser = argparse.ArgumentParser(description='Faster R-CNN Networks Arguments')
@@ -256,7 +259,7 @@ def main():
     parser.add_argument('-s', '--slim', default=1)  # Binary to restore a TF-Slim Model. 0 = No eval.
     parser.add_argument('-t', '--train', default=1)  # Binary to train model. 0 = No train.
     parser.add_argument('-v', '--eval', default=1)  # Binary to evalulate model. 0 = No eval.
-    parser.add_argument('-y', '--yaml', default='pascal_voc.yml')  # YAML file to override config defaults
+    parser.add_argument('-y', '--yaml', default='pascal_voc2007.yml')  # YAML file to override config defaults
     parser.add_argument('-l', '--learn_rate', default=3e-4)  # learning Rate # TODO: move this to cfg
     parser.add_argument('-i', '--vis', default=0)  # enable visualizations
     parser.add_argument('-g', '--gpu', default=0)  # specifiy which GPU to use
