@@ -43,15 +43,15 @@ def create_feed_dict(data_directory, names, tf_inputs, image_index):
     annotation_file = data_directory + 'Annotations/' + names[image_index] + '.txt'
 
     # Read data
-    im_8bit = imread(image_file)
+    image = imread(image_file)
     gt_bbox = np.loadtxt(annotation_file, ndmin=2)
     
     # Image dimensions
-    im_dims = np.array(im_8bit.shape[:2]).reshape([1, 2])
+    im_dims = np.array(image.shape[:2]).reshape([1, 2])
 
     # Perform Image Processing for Pascal VOC
     if cfg.DATASET_NAME == 'pascal_voc2007':
-        image = im_8bit.astype(dtype=np.float32, copy=True)
+        image = image.astype(dtype=np.float32, copy=True)
         image -= cfg.PIXEL_MEANS
 
     # Perform data augmentation operations

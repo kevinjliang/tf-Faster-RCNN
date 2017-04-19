@@ -91,25 +91,21 @@ class FasterRcnnRes50(Model):
         eval_mode = True if (key == 'EVAL') else False
           
         # CNN Feature extractor
-        res_features = resnet50_reduced(x, is_training=False)
-        self.cnn[key] = Layers(res_features)
-        self.cnn[key].conv2d(3, 512)
-        
-        # CNN Feature Maps
-        feature_maps = self.cnn[key].get_output()
+        self.cnn[key] = resnet50_reduced(x, is_training=True)
+
         # CNN downsampling factor
         _feat_stride = 16           
 
-        self.print_log(feature_maps)
+        self.print_log(self.cnn[key])
         
         # Region Proposal Network (RPN)
-        self.rpn_net[key] = rpn(feature_maps, gt_boxes, im_dims, _feat_stride, eval_mode)
+        self.rpn_net[key] = rpn(self.cnn[key], gt_boxes, im_dims, _feat_stride, eval_mode)
 
         # RoI Proposals
         self.roi_proposal_net[key] = roi_proposal(self.rpn_net[key], gt_boxes, im_dims, eval_mode)
 
         # Fast R-CNN Classification
-        self.fast_rcnn_net[key] = fast_rcnn(feature_maps, self.roi_proposal_net[key], eval_mode)
+        self.fast_rcnn_net[key] = fast_rcnn(self.cnn[key], self.roi_proposal_net[key], eval_mode)
 
     def _optimizer(self):
         """ Define losses and initialize optimizer """
@@ -131,7 +127,6 @@ class FasterRcnnRes50(Model):
         tf.summary.scalar("RPN_bbox_Loss", self.rpn_bbox_loss)
         tf.summary.scalar("Fast_RCNN_Cls_Loss", self.fast_rcnn_cls_loss)
         tf.summary.scalar("Fast_RCNN_Bbox_Loss", self.fast_rcnn_bbox_loss)
-#        tf.summary.image("x_train", self.x['TRAIN'])
         
     def _run_train_iter(self, feed_dict):
         """ Run training iteration"""

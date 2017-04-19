@@ -105,7 +105,7 @@ def gen_nCluttered(data, labels, im_dims, num_digits, clutter_rate=1):
     Args:
         data: MNIST image data (num_images, 784)
         labels: MNIST labels (num_images, )
-        im_dims: [height, weight] of output cluttered MNIST digit image
+        im_dims: [height, width] of output cluttered MNIST digit image
         num_digits: number of full MNIST digits to embed
         clutter_rate: how much to clutter background with fragments
     """
@@ -125,7 +125,7 @@ def gen_nCluttered(data, labels, im_dims, num_digits, clutter_rate=1):
         w = np.random.randint(low=int(28 / 1.5), high=int(28 * 1.5))
         digit = zoom(digit, (h / 28, w / 28))
 
-        while True:
+        while(True):
             # Randomly choose location in image_out
             x = np.random.randint(low=0, high=im_dims[1] - w)
             y = np.random.randint(low=0, high=im_dims[0] - h)
@@ -258,9 +258,9 @@ def im_dims_generator():
 def num_digits_generator():
     """ Allow user to specify hardcoded number of digits or random num of digits """
     if flags['num_digits'] == 'random':
-        return np.random.randint(1, 4)
+        return np.random.randint(1, 3)
     else:
-        assert flags['num_digits'] in [1, 2, 3, 4]
+        assert flags['num_digits'] in [1, 2, 3]
         return flags['num_digits']
 
 

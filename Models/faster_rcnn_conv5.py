@@ -119,9 +119,7 @@ class FasterRcnnConv5(Model):
         tf.summary.scalar("RPN_bbox_Loss", self.rpn_bbox_loss)
         tf.summary.scalar("Fast_RCNN_Cls_Loss", self.fast_rcnn_cls_loss)
         tf.summary.scalar("Fast_RCNN_Bbox_Loss", self.fast_rcnn_bbox_loss)
-#        tf.summary.image("x_train", self.x['TRAIN'])
 
-        
     def _run_train_iter(self, feed_dict):
         """ Run training iteration"""
         summary, _ = self.sess.run([self.merged, self.optimizer], feed_dict=feed_dict)
@@ -129,37 +127,36 @@ class FasterRcnnConv5(Model):
 
     def _record_train_metrics(self, feed_dict):
         """ Run training iteration and record training metrics """
-        summary, _, loss, loss1, loss2, loss3, loss4 = self.sess.run([self.merged, self.optimizer, self.cost, 
-                                                                      self.rpn_cls_loss, self.rpn_bbox_loss, self.fast_rcnn_cls_loss, self.fast_rcnn_bbox_loss],
-                                                                      feed_dict=feed_dict)     
-        self.print_log('Step %d: total loss=%.6f, rpn_cls loss=%.6f, rpn_bbox loss=%.6f, rcnn_cls loss=%.6f, rcnn_bbox loss=%.6f' %
-                       (self.step, loss, loss1, loss2, loss3, loss4))
-        
+        summary, loss, _, loss1, loss2, loss3, loss4 = self.sess.run([self.merged, self.cost, self.optimizer, self.rpn_cls_loss,
+                                                                   self.rpn_bbox_loss, self.fast_rcnn_cls_loss,
+                                                                   self.fast_rcnn_bbox_loss], feed_dict=feed_dict)
+        self.print_log('Step %d: total loss=%.6f, rpn_cls loss=%.6f, rpn_bbox loss=%.6f, rcnn_cls loss=%.6f,'
+                       'rcnn_bbox loss=%.6f' % (self.step, loss, loss1, loss2, loss3, loss4))
         return summary
 
     def train(self):
         """ Run training function. Save model upon completion """
         self.print_log('Training for %d epochs' % self.flags['num_epochs'])
-        
+
         tf_inputs = (self.x['TRAIN'], self.im_dims['TRAIN'], self.gt_boxes['TRAIN'])
-        
+
         self.step += 1
-        for self.epoch in trange(1, self.flags['num_epochs']+1, desc='epochs'):
+        for self.epoch in trange(1, self.flags['num_epochs'] + 1, desc='epochs'):
             train_order = randomize_training_order(len(self.names['TRAIN']))
-            
+
             for i in tqdm(train_order):
                 feed_dict = create_feed_dict(flags['data_directory'], self.names['TRAIN'], tf_inputs, i)
-                
+
                 # Run a training iteration
                 if self.step % (self.flags['display_step']) == 0:
                     # Record training metrics every display_step interval
                     summary = self._record_train_metrics(feed_dict)
                     self._record_training_step(summary)
-                else: 
+                else:
                     summary = self._run_train_iter(feed_dict)
-                    self._record_training_step(summary)             
+                    self._record_training_step(summary)
             
-            ## Epoch finished
+            # Epoch finished
             # Save model 
             if self.epoch % cfg.CHECKPOINT_RATE == 0: 
                 self._save_model(section=self.epoch)
