@@ -36,7 +36,7 @@ def create_feed_dict(data_directory, names, tf_inputs, image_index):
             [0] x: the image input (rows, cols, channels)
             [1] im_dims: image dimensions of input (height, width)
             [2] gt_boxes: ground truth boxes (and labels) from the annotations file (x1, y1, x2, y2, label)
-    image_index: the index of the image the feed_dict is being crated for
+    image_index: the index of the image the feed_dict is being created for
     '''
     # Data filenames
     image_file = data_directory + 'Images/' + names[image_index] + cfg.IMAGE_FORMAT
