@@ -64,34 +64,8 @@ def test_net(data_directory, names, sess, tf_inputs, tf_outputs, max_per_image=3
     if not os.path.exists(det_dir):
         os.makedirs(det_dir)
 
-    # Check for detections already. If they don't exists or if user wants to overwrite, then detect_boxes()
-    det_file = det_dir + 'detections.pkl'
-    if os.path.exists(det_file) and key == 'TEST':
-        overwrite = input('Saved detections were .. detected. Would you like to overwrite? [y/n]')
-        if overwrite == 'y':
-            # Detect boxes
-            print('Detecting boxes in images:')
-            all_boxes, detection_made = detect_boxes(num_images, num_classes, data_directory, names, sess, tf_inputs,
-                                                     tf_outputs, thresh)
-            # Save detections
-            det_file = det_dir + 'detections.pkl'
-            with open(det_file, 'wb') as f:
-                pickle.dump(all_boxes, f)
-
-        else:
-            # Load boxes from pickle file
-            print('Loading boxes from %s' % det_file)
-            detection_made = True
-            all_boxes = pickle.load(open(det_file, "rb"))
-    else:
-        # Detect boxes
-        print('Detecting boxes in images:')
-        all_boxes, detection_made = detect_boxes(num_images, num_classes, data_directory, names, sess, tf_inputs,
-                                                 tf_outputs, thresh)
-        # Save detections
-        det_file = det_dir + 'detections.pkl'
-        with open(det_file, 'wb') as f:
-            pickle.dump(all_boxes, f)
+    # Either detect boxes or load previous detections  
+    all_boxes, detection_made = _detect_boxes(num_images, num_classes, data_directory, names, sess, tf_inputs, tf_outputs, thresh, det_dir, key)
 
     # Ensure that at least some detections were made
     if not detection_made:
@@ -123,16 +97,31 @@ def test_net(data_directory, names, sess, tf_inputs, tf_outputs, max_per_image=3
             gt = np.loadtxt(data_directory + 'Annotations/' + names[i] + '.txt', ndmin=2)
 
             # Visualize detections
-            vis_detections(image, gt, dets, cls, outputPNGfilename)
+            _vis_detections(image, gt, dets, cls, outputPNGfilename)
 
     class_metrics = evaluate_predictions(all_boxes, data_directory, names)
         
     return class_metrics
 
 
-def detect_boxes(num_images, num_classes, data_directory, names, sess, tf_inputs, tf_outputs, thresh):
+def _detect_boxes(num_images, num_classes, data_directory, names, sess, tf_inputs, tf_outputs, thresh, det_dir, key):
     """ Detection of bounding boxes in test image. See test_net for detailed description of inputs """
-
+    
+    det_file = det_dir + key + '_detections.pkl'
+    
+    # Check for detections already. If they don't exists or if user wants to overwrite, then detect boxes from scratch
+    if os.path.exists(det_file) and key == 'TEST':
+        overwrite = input('Saved detections were detected. Would you like to overwrite? [y/n]')
+        if overwrite.strip().lower() == 'n':
+            # Load boxes from pickle file
+            print('Loading boxes from %s' % det_file)
+            detection_made = True
+            all_boxes = pickle.load(open(det_file, "rb"))
+            return all_boxes, detection_made
+        else:
+            assert overwrite.strip().lower() == 'y', 'Invalid input'
+    
+    
     # Ensure at least one detection is made or else an error will be thrown.
     detection_made = False
 
@@ -165,6 +154,10 @@ def detect_boxes(num_images, num_classes, data_directory, names, sess, tf_inputs
                 .astype(np.float32, copy=False)
             all_boxes[j][i] = cls_dets
 
+    # Save Detections
+    with open(det_file, 'wb') as f:
+        pickle.dump(all_boxes, f)
+        
     return all_boxes, detection_made
 
 
@@ -210,7 +203,7 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
     return cls_prob, pred_boxes
 
 
-def vis_detections(im, gt_boxes, dets, cls, filename=None, skip_background=True):
+def _vis_detections(im, gt_boxes, dets, cls, filename=None, skip_background=True):
     """Visual debugging of detections."""
 
     # Extract ground truth classes and boxes
@@ -229,7 +222,7 @@ def vis_detections(im, gt_boxes, dets, cls, filename=None, skip_background=True)
 
     # Plot ground truth boxes
     for g in range(gt_boxes.shape[0]):
-        plot_patch(ax, bb_gt[g, :], None, None, 'g')
+        _plot_patch(ax, bb_gt[g, :], None, None, 'g')
 
     # Plot detections
     for i in range(dets.shape[0]):
@@ -239,10 +232,10 @@ def vis_detections(im, gt_boxes, dets, cls, filename=None, skip_background=True)
         bb = dets[i, 2:]
 
         # Compute IOU with gt_boxes
-        _, ovargmax = compute_iou(bb=bb, bbgt=bb_gt)
+        ovmax, ovargmax = compute_iou(bb=bb, bbgt=bb_gt)
 
         # Determine correct color of box
-        if cls[i] == cls_gt[ovargmax]:
+        if cls[i] == cls_gt[ovargmax] and ovmax > 0.5:
             color = 'b'  # Correct label
         elif cls[i] == 0:
             color = 'm'  # Background label
@@ -253,7 +246,7 @@ def vis_detections(im, gt_boxes, dets, cls, filename=None, skip_background=True)
 
         # Plot the rectangle
         class_name = cfg.CLASSES[cls[i]]
-        plot_patch(ax, bb, score, class_name, color)
+        _plot_patch(ax, bb, score, class_name, color)
 
     # Save figure
     if filename is not None:
@@ -266,7 +259,7 @@ def vis_detections(im, gt_boxes, dets, cls, filename=None, skip_background=True)
     plt.close(fig)
 
 
-def plot_patch(ax, bbox, score, class_name, color):
+def _plot_patch(ax, bbox, score, class_name, color):
     """ Plot a rectangle (labeled with color, class_name, and score) on the test image """
 
     # Calculate Bounding Box Rectangle and plot it
