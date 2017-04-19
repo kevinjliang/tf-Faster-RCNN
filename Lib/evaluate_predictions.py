@@ -44,7 +44,7 @@ def calc_ap(rec, prec):
     return ap
 
 
-def evaluate_predictions(test_image_object, data_directory, names, ovthresh=0.4):
+def evaluate_predictions(test_image_object, data_directory, names, ovthresh=0.5):
     """
     Evaluates predicted detections 
     :param test_image_object: array, obj[cls][image] = N x 5 [x1, y1, x2, y2, cls_score]
