@@ -34,7 +34,7 @@ flags = {
     'nums': {"train": 55000, "valid": 5000, "test": 10000},
     'all_names': ["train", "valid", "test"],
     'num_classes': 10,
-    'num_digits': 'random',  # Can also be a int in [1,2,3,4]. 'random' chooses an int [1, 4]
+    'num_digits': 'random',  # Can also be a int in [1,2,3]. 'random' chooses an int [1, 3]
     'im_dims': 'random',  # Can also be an int > 28 * 2. 'random' chooses an int between [100, 200]
     # for each side
 }
@@ -258,9 +258,9 @@ def im_dims_generator():
 def num_digits_generator():
     """ Allow user to specify hardcoded number of digits or random num of digits """
     if flags['num_digits'] == 'random':
-        return np.random.randint(1, 4)
+        return np.random.randint(1, 3)  # Can't do more than 3 digits, or the script will get stuck in the while loop
     else:
-        assert flags['num_digits'] in [1, 2, 3, 4]
+        assert flags['num_digits'] in [1, 2, 3]
         return flags['num_digits']
 
 
