@@ -72,7 +72,6 @@ class FasterRcnnRes50(Model):
     def _network(self):
         """ Define the network outputs """
         # Initialize network dicts
-        self.cnn = {}
         self.rpn_net = {}
         self.roi_proposal_net = {}
         self.fast_rcnn_net = {}
@@ -91,12 +90,7 @@ class FasterRcnnRes50(Model):
         eval_mode = True if (key == 'EVAL') else False
           
         # CNN Feature extractor
-        res_features = resnet50_reduced(x, is_training=False)
-        self.cnn[key] = Layers(res_features)
-        self.cnn[key].conv2d(3, 512)
-        
-        # CNN Feature Maps
-        feature_maps = self.cnn[key].get_output()
+        feature_maps = resnet50_reduced(x)
         # CNN downsampling factor
         _feat_stride = 16           
 
@@ -256,8 +250,8 @@ def main():
     parser.add_argument('-s', '--slim', default=1)  # Binary to restore a TF-Slim Model. 0 = No eval.
     parser.add_argument('-t', '--train', default=1)  # Binary to train model. 0 = No train.
     parser.add_argument('-v', '--eval', default=1)  # Binary to evalulate model. 0 = No eval.
-    parser.add_argument('-y', '--yaml', default='pascal_voc.yml')  # YAML file to override config defaults
-    parser.add_argument('-l', '--learn_rate', default=3e-4)  # learning Rate # TODO: move this to cfg
+    parser.add_argument('-y', '--yaml', default='pascal_voc2007.yml')  # YAML file to override config defaults
+    parser.add_argument('-l', '--learn_rate', default=1e-3)  # learning Rate 
     parser.add_argument('-i', '--vis', default=0)  # enable visualizations
     parser.add_argument('-g', '--gpu', default=0)  # specifiy which GPU to use
     args = vars(parser.parse_args())
@@ -282,11 +276,12 @@ def main():
     else:
         dictionary = []
         print('Using Default settings')
-    update_flags()
         
     flags['learning_rate'] = float(args['learn_rate'])
     flags['vis'] = True if (int(args['vis']) == 1) else False
     flags['gpu'] = int(args['gpu'])
+    
+    update_flags()
     
     model = FasterRcnnRes50(flags, dictionary)
     if int(args['train']) == 1:

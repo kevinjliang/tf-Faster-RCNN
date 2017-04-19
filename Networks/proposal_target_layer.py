@@ -61,7 +61,7 @@ def _proposal_target_layer_py(rpn_rois, gt_boxes,_num_classes):
             
     num_images = 1
     rois_per_image = cfg.TRAIN.BATCH_SIZE // num_images
-    fg_rois_per_image = np.round(cfg.TRAIN.FG_FRACTION * rois_per_image)
+    fg_rois_per_image = np.round(cfg.TRAIN.FG_FRACTION * rois_per_image).astype(np.int32)
     
     # Sample rois with classification labels and bounding box regression
     # targets
