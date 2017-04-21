@@ -18,6 +18,7 @@ Functions for testing Faster RCNN net after it's been trained
 from .bbox_transform import clip_boxes, bbox_transform_inv
 from .evaluate_predictions import evaluate_predictions, compute_iou
 from .fast_rcnn_config import cfg
+from .nms_wrapper import nms
 
 import matplotlib
 matplotlib.use('TkAgg')  # For Mac OS
@@ -148,10 +149,13 @@ def _detect_boxes(num_images, num_classes, data_directory, names, sess, tf_input
                 continue
             detection_made = True
             cls_probs = probs[inds, j]  # Class Scores
-            cls_index = np.repeat(i, len(inds))  # Index of Image
             cls_boxes = boxes[inds, j * 4:(j + 1) * 4]  # Class Box Predictions
-            cls_dets = np.hstack((cls_probs[:, np.newaxis], cls_index[:, np.newaxis], cls_boxes)) \
+            cls_dets = np.hstack((cls_boxes, cls_probs[:, np.newaxis])) \
                 .astype(np.float32, copy=False)
+            keep = nms(cls_dets, cfg.TEST.NMS)
+            cls_dets = cls_dets[keep, :]
+            cls_index = np.repeat(i, len(keep)) # Index of Image
+            cls_dets = np.hstack((cls_dets, cls_index[:, np.newaxis]))
             all_boxes[j][i] = cls_dets
 
     # Save Detections
@@ -216,10 +220,6 @@ def _vis_detections(im, gt_boxes, dets, cls, filename=None, skip_background=True
         im = np.squeeze(im[:, :, 2])
     ax.imshow(im, cmap="gray")
 
-    # Plot title
-    if dets.shape[0] > 0:
-        plt.title(str(int(dets[0, 1])))
-
     # Plot ground truth boxes
     for g in range(gt_boxes.shape[0]):
         _plot_patch(ax, bb_gt[g, :], None, None, 'g')
@@ -228,8 +228,8 @@ def _vis_detections(im, gt_boxes, dets, cls, filename=None, skip_background=True
     for i in range(dets.shape[0]):
 
         # Extract class score and bounding box
-        score = dets[i, 0]
-        bb = dets[i, 2:]
+        score = dets[i, 4]
+        bb = dets[i, :4]
 
         # Compute IOU with gt_boxes
         ovmax, ovargmax = compute_iou(bb=bb, bbgt=bb_gt)
