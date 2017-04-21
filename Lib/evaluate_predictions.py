@@ -86,7 +86,7 @@ def evaluate_predictions(test_image_object, data_directory, names, ovthresh=0.5)
 
         # Sort the detections by confidence (cls_score)
         if len(all_dets.shape) == 2:
-            confidence = [score for score in all_dets[:, 0]]
+            confidence = [score for score in all_dets[:, 4]]
         else:
             print('No detections for class {0}'.format(cfg.CLASSES[c]))
             class_metrics[c-1] = 0
@@ -104,13 +104,13 @@ def evaluate_predictions(test_image_object, data_directory, names, ovthresh=0.5)
         # go down dets and mark TPs and FPs
         for d in range(nd):  # loop through all detections
             # Get ground truth
-            img_indx = int(all_dets[d, 1])
+            img_indx = int(all_dets[d, 5])
             name = names[img_indx]
             gt_boxes = np.loadtxt(data_directory + '/Annotations/' + name + '.txt', ndmin=2)
             
             # Store proposal dets as bb and ground truth as bbgt
             bbgt = gt_boxes[:, :4]
-            bb = all_dets[d, 2:6]
+            bb = all_dets[d, :4]
             classes = gt_boxes[:, 4]
 
             # Compute Intersection Over Union

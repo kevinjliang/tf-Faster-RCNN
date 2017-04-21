@@ -13,7 +13,7 @@ Note: We take the feature maps before the last ResNet block
 import sys
 sys.path.append('../')
 
-from Lib.TensorBase.tensorbase.base import Model, Data, Layers
+from Lib.TensorBase.tensorbase.base import Model, Data
 from Lib.fast_rcnn_config import cfg, cfg_from_file
 from Lib.test_aux import test_net
 from Lib.train_aux import randomize_training_order, create_feed_dict
@@ -116,7 +116,7 @@ class FasterRcnnRes50(Model):
         self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss + self.fast_rcnn_bbox_loss)
 
         # Total Loss
-        self.optimizer = tf.train.MomentumOptimizer(learning_rate=self.lr, momentum=0.9).minimize(self.cost)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr, epsilon=0.1).minimize(self.cost)
         
     def _summaries(self):
         """ Define summaries for TensorBoard """
@@ -171,10 +171,10 @@ class FasterRcnnRes50(Model):
             # Perform validation
             if self.epoch % cfg.VALID_RATE == 0: 
                 self.evaluate(test=False)
-            # Adjust learning rate
-            if self.epoch % cfg.TRAIN.LEARNING_RATE_DECAY_RATE == 0:
-                self.lr = self.lr/cfg.TRAIN.LEARNING_RATE_DECAY
-                self.print_log("Learning Rate: %f" % self.lr)
+#            # Adjust learning rate
+#            if self.epoch % cfg.TRAIN.LEARNING_RATE_DECAY_RATE == 0:
+#                self.lr = self.lr/cfg.TRAIN.LEARNING_RATE_DECAY
+#                self.print_log("Learning Rate: %f" % self.lr)
                         
 
     def evaluate(self, test=True):
