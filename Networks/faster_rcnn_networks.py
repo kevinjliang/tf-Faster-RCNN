@@ -17,7 +17,7 @@ sys.path.append('../')
 
 from Lib.TensorBase.tensorbase.base import Layers
 
-from Lib.fast_rcnn_config import cfg
+from Lib.faster_rcnn_config import cfg
 from Lib.loss_functions import rpn_cls_loss, rpn_bbox_loss, fast_rcnn_cls_loss, fast_rcnn_bbox_loss
 from Lib.roi_pool import roi_pool
 from Lib.rpn_softmax import rpn_softmax

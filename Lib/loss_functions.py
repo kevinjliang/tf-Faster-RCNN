@@ -8,7 +8,7 @@ Created on Tue Jan 17 15:05:05 2017
 Loss functions
 """
 
-from .fast_rcnn_config import cfg
+from .faster_rcnn_config import cfg
 
 import tensorflow as tf
 

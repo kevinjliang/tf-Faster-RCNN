@@ -17,7 +17,7 @@ Functions for testing Faster RCNN net after it's been trained
 
 from .bbox_transform import clip_boxes, bbox_transform_inv
 from .evaluate_predictions import evaluate_predictions, compute_iou
-from .fast_rcnn_config import cfg
+from .faster_rcnn_config import cfg
 from .nms_wrapper import nms
 
 import matplotlib

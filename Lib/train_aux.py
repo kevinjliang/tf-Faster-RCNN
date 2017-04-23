@@ -8,7 +8,7 @@ Created on Sun Apr  2 14:27:19 2017
 Helper functions for preprocessing data and training Faster RCNN 
 """
 
-from .fast_rcnn_config import cfg
+from .faster_rcnn_config import cfg
 
 import numpy as np
 from scipy.misc import imread

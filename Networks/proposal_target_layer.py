@@ -21,7 +21,7 @@ import tensorflow as tf
 
 from Lib.bbox_overlaps import bbox_overlaps
 from Lib.bbox_transform import bbox_transform
-from Lib.fast_rcnn_config import cfg
+from Lib.faster_rcnn_config import cfg
 
 
 def proposal_target_layer(rpn_rois, gt_boxes,_num_classes):

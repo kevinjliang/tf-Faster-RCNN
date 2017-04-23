@@ -24,7 +24,7 @@ import numpy as np
 import tensorflow as tf
 
 from Lib.bbox_transform import bbox_transform_inv, clip_boxes
-from Lib.fast_rcnn_config import cfg
+from Lib.faster_rcnn_config import cfg
 from Lib.generate_anchors import generate_anchors
 from Lib.nms_wrapper import nms
 

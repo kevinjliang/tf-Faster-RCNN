@@ -16,7 +16,7 @@ Created on Tue Apr 11 12:35:40 2017
 import sys
 sys.path.append('../../')
 
-from Lib.fast_rcnn_config import cfg, cfg_from_file
+from Lib.faster_rcnn_config import cfg, cfg_from_file
 
 import argparse
 import numpy as np

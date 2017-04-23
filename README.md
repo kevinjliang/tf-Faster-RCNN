@@ -122,7 +122,7 @@ Step 1 of the [cluttered MNIST demo](#simple-demo) automatically creates this da
 #### Configure the model
 The network architecture and model parameters depend on the kind of data you are trying to process. Most of these are adjustable from the config file. 
 
-Default settings and their descriptions are located at [Lib/fast_rcnn_config.py](https://github.com/kevinjliang/tf-Faster-RCNN/blob/master/Lib/fast_rcnn_config.py). You should not modify this. Instead, write a yaml file, save it under Models/cfgs, and pass it as an argument to your model. See [Models/cfgs/clutteredMNIST.yml](https://github.com/kevinjliang/tf-Faster-RCNN/blob/master/Models/cfgs/clutteredMNIST.yml) as an example.
+Default settings and their descriptions are located at [Lib/faster_rcnn_config.py](https://github.com/kevinjliang/tf-Faster-RCNN/blob/master/Lib/faster_rcnn_config.py). You should not modify this. Instead, write a yaml file, save it under Models/cfgs, and pass it as an argument to your model. See [Models/cfgs/clutteredMNIST.yml](https://github.com/kevinjliang/tf-Faster-RCNN/blob/master/Models/cfgs/clutteredMNIST.yml) as an example.
 
 In particular, make sure to change the following:
 - Point `DATA_DIRECTORY` to your dataset folder (denoted by [YOUR_DATASET] in the earlier file tree). Make this path relative to the [Models/](https://github.com/kevinjliang/tf-Faster-RCNN/tree/master/Models) directory.

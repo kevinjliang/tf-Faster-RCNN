@@ -16,7 +16,7 @@ Functions for testing Faster RCNN net and getting Mean Average Precision
 # --------------------------------------------------------
 
 
-from .fast_rcnn_config import cfg
+from .faster_rcnn_config import cfg
 
 import numpy as np
 from tqdm import tqdm

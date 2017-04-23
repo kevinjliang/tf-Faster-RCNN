@@ -14,7 +14,7 @@ import sys
 sys.path.append('../')
 
 from Lib.TensorBase.tensorbase.base import Model, Data
-from Lib.fast_rcnn_config import cfg, cfg_from_file
+from Lib.faster_rcnn_config import cfg, cfg_from_file
 from Lib.test_aux import test_net
 from Lib.train_aux import randomize_training_order, create_feed_dict
 

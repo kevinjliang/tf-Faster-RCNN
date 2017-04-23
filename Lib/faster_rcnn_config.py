@@ -12,9 +12,9 @@ Created on Sun Jan  1 20:47:15 2017
 # Written by Ross Girshick
 # --------------------------------------------------------
 
-"""Fast R-CNN config system.
+"""Faster R-CNN config system.
 
-This file specifies default config options for Fast R-CNN. You should not
+This file specifies default config options for Faster R-CNN. You should not
 change values in this file. Instead, you should write a config file (in yaml)
 and use cfg_from_file(yaml_file) to load it and override the default options.
 
@@ -32,7 +32,7 @@ from easydict import EasyDict as edict
 
 __C = edict()
 # Consumers can get config by:
-#   from fast_rcnn_config import cfg
+#   from faster_rcnn_config import cfg
 cfg = __C
 
 
