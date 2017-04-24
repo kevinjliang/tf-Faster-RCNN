@@ -199,6 +199,15 @@ __C.TEST.RPN_MIN_SIZE = 16
 __C.TEST.NMS = 0.3
 
 
+# Evaluate with test ground truth (Turn off for deployment, when you don't have gt info)
+__C.TEST.GROUNDTRUTH = True
+# Plot ground truth boxes on output images. (Turn off of gt boxes are creating too much clutter)
+__C.TEST.PLOT_GROUNDTRUTH = True
+# Output image colormap (cmap argument to matplotlib.pyplot.imshow())
+# Default of 'jet' is standard RGB
+__C.TEST.CMAP = 'jet'
+
+
 
 ###############################################################################
 # MISC
@@ -212,6 +221,9 @@ __C.SAVE_DIRECTORY = '../Logs/'
 __C.MODEL_DIRECTORY = 'FRCNN/'
 # TF Slim restore file for resnet50
 __C.RESTORE_SLIM_FILE = ""
+
+# How much of GPU memory to use (TensorFlow tries to take up entire GPU by default)
+__C.VRAM = 0.8
 
 # Image file format ('.png', '.jpg')
 __C.IMAGE_FORMAT = '.png'

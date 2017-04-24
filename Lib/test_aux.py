@@ -56,9 +56,6 @@ def test_net(data_directory, names, sess, tf_inputs, tf_outputs, max_per_image=3
     vis: Visualize detection in figure using vis_detections
             
     """
-    # Load number of images and classes
-    num_images = len(names)
-    num_classes = cfg.NUM_CLASSES
 
     # Create output directory
     det_dir = data_directory + 'Outputs/'
@@ -66,47 +63,25 @@ def test_net(data_directory, names, sess, tf_inputs, tf_outputs, max_per_image=3
         os.makedirs(det_dir)
 
     # Either detect boxes or load previous detections  
-    all_boxes, detection_made = _detect_boxes(num_images, num_classes, data_directory, names, sess, tf_inputs, tf_outputs, thresh, det_dir, key)
+    all_boxes, detection_made = _detect_boxes(data_directory, names, sess, tf_inputs, tf_outputs, thresh, det_dir, key, vis)
 
     # Ensure that at least some detections were made
     if not detection_made:
         print("No detections were made")
-        return [0.0]*num_classes
+        return [0.0]*cfg.NUM_CLASSES
 
-    # Output visualizations if vis == True
-    if vis:
-        # Use all_boxes to get detections from a single image from all classes
-        for i in tqdm(range(num_images)):
-            dets = list()
-            cls = list()
-            for c in range(1, num_classes):
-                if len(all_boxes[c][i]) == 0:
-                    continue
-                else:
-                    add = all_boxes[c][i]
-                    dets.extend(add)
-                    cls.extend(np.repeat(c, add.shape[0]))
-
-            # Formating for visualization
-            outputPNGfilename = det_dir + names[i]
-            dets = np.array(dets)
-            cls = np.array(cls)
-
-            # Load image and GT information
-            im_file = data_directory + 'Images/' + names[i] + cfg.IMAGE_FORMAT
-            image = imread(im_file)
-            gt = np.loadtxt(data_directory + 'Annotations/' + names[i] + '.txt', ndmin=2)
-
-            # Visualize detections
-            _vis_detections(image, gt, dets, cls, outputPNGfilename)
-
-    class_metrics = evaluate_predictions(all_boxes, data_directory, names)
-        
-    return class_metrics
+    if cfg.TEST.GROUNDTRUTH:
+        class_metrics = evaluate_predictions(all_boxes, data_directory, names)
+        return class_metrics
+    else:
+        return [0.0]*cfg.NUM_CLASSES
+    
 
 
-def _detect_boxes(num_images, num_classes, data_directory, names, sess, tf_inputs, tf_outputs, thresh, det_dir, key):
+def _detect_boxes(data_directory, names, sess, tf_inputs, tf_outputs, thresh, det_dir, key, vis):
     """ Detection of bounding boxes in test image. See test_net for detailed description of inputs """
+    
+    num_images = len(names)
     
     det_file = det_dir + key + '_detections.pkl'
     
@@ -128,9 +103,9 @@ def _detect_boxes(num_images, num_classes, data_directory, names, sess, tf_input
 
     # all detections are collected into:
     #    all_boxes[cls][image] = N x 5 array of detections in
-    #    (x1, y1, x2, y2, score)
+    #    (x1, y1, x2, y2, prob)
     all_boxes = [[[] for _ in range(num_images)]
-                 for _ in range(num_classes)]
+                 for _ in range(cfg.NUM_CLASSES)]
 
     # Loop through all images and generate proposals
     for i in tqdm(range(num_images)):
@@ -141,22 +116,44 @@ def _detect_boxes(num_images, num_classes, data_directory, names, sess, tf_input
 
         # Perform Detection
         probs, boxes = _im_detect(sess, image, tf_inputs, tf_outputs)
+        
+        # Collect all detections for if visualizing
+        if vis:
+            dets = list()
+            cls = list()
 
         # skip j = 0, because it's the background class
-        for j in range(1, num_classes):
+        for j in range(1, cfg.NUM_CLASSES):
             inds = np.where(probs[:, j] > thresh)[0]
             if len(inds) == 0:
                 continue
             detection_made = True
-            cls_probs = probs[inds, j]  # Class Scores
+            cls_probs = probs[inds, j]                  # Class Probabilities
             cls_boxes = boxes[inds, j * 4:(j + 1) * 4]  # Class Box Predictions
             cls_dets = np.hstack((cls_boxes, cls_probs[:, np.newaxis])) \
                 .astype(np.float32, copy=False)
-            keep = nms(cls_dets, cfg.TEST.NMS)
+            keep = nms(cls_dets, cfg.TEST.NMS)          # Apply NMS
             cls_dets = cls_dets[keep, :]
-            cls_index = np.repeat(i, len(keep)) # Index of Image
-            cls_dets = np.hstack((cls_dets, cls_index[:, np.newaxis]))
             all_boxes[j][i] = cls_dets
+
+            if vis:
+                dets.extend(cls_dets)
+                cls.extend(np.repeat(j, cls_dets.shape[0]))
+
+        if vis:
+            # Formating for visualization
+            outputfilename = det_dir + names[i] + cfg.IMAGE_FORMAT
+            dets = np.array(dets)
+            cls = np.array(cls)
+
+            # Load image and GT information
+            if cfg.TEST.GROUNDTRUTH:
+                gt = np.loadtxt(data_directory + 'Annotations/' + names[i] + '.txt', ndmin=2)
+            else:
+                gt = None
+
+            # Visualize detections
+            _vis_detections(image, gt, dets, cls, outputfilename)
 
     # Save Detections
     with open(det_file, 'wb') as f:
@@ -210,43 +207,47 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
 def _vis_detections(im, gt_boxes, dets, cls, filename=None, skip_background=True):
     """Visual debugging of detections."""
 
-    # Extract ground truth classes and boxes
-    cls_gt = gt_boxes[:, 4]
-    bb_gt = gt_boxes[:, :4]
-
     # Plot image
     fig, ax = plt.subplots(1)
-    if len(im.shape) > 2:
-        im = np.squeeze(im[:, :, 2])
-    ax.imshow(im, cmap="gray")
+    ax.imshow(im, cmap=cfg.TEST.CMAP)
 
-    # Plot ground truth boxes
-    for g in range(gt_boxes.shape[0]):
-        _plot_patch(ax, bb_gt[g, :], None, None, 'g')
+
+    if gt_boxes is not None:    
+        # Extract ground truth classes and boxes
+        cls_gt = gt_boxes[:, 4]
+        bb_gt = gt_boxes[:, :4]
+    
+        # Plot ground truth boxes
+        if cfg.TEST.PLOT_GROUNDTRUTH:
+            for g in range(gt_boxes.shape[0]):
+                _plot_patch(ax, bb_gt[g, :], None, None, 'g')
 
     # Plot detections
     for i in range(dets.shape[0]):
 
-        # Extract class score and bounding box
-        score = dets[i, 4]
+        # Extract class probability and bounding box
+        prob = dets[i, 4]
         bb = dets[i, :4]
 
-        # Compute IOU with gt_boxes
-        ovmax, ovargmax = compute_iou(bb=bb, bbgt=bb_gt)
-
-        # Determine correct color of box
-        if cls[i] == cls_gt[ovargmax] and ovmax > 0.5:
-            color = 'b'  # Correct label
-        elif cls[i] == 0:
-            color = 'm'  # Background label
-            if skip_background:
-                continue
+        if gt_boxes is not None:
+            # Compute IOU with gt_boxes
+            ovmax, ovargmax = compute_iou(bb=bb, bbgt=bb_gt)
+    
+            # Determine correct color of box
+            if cls[i] == cls_gt[ovargmax] and ovmax > 0.5:
+                color = 'b'  # Correct label
+            elif cls[i] == 0:
+                color = 'm'  # Background label
+                if skip_background:
+                    continue
+            else:
+                color = 'r'  # Mislabel   
         else:
-            color = 'r'  # Mislabel
-
+            color = 'c'
+            
         # Plot the rectangle
         class_name = cfg.CLASSES[cls[i]]
-        _plot_patch(ax, bb, score, class_name, color)
+        _plot_patch(ax, bb, prob, class_name, color)
 
     # Save figure
     if filename is not None:
@@ -259,8 +260,8 @@ def _vis_detections(im, gt_boxes, dets, cls, filename=None, skip_background=True
     plt.close(fig)
 
 
-def _plot_patch(ax, bbox, score, class_name, color):
-    """ Plot a rectangle (labeled with color, class_name, and score) on the test image """
+def _plot_patch(ax, bbox, prob, class_name, color):
+    """ Plot a rectangle (labeled with color, class_name, and prob) on the test image """
 
     # Calculate Bounding Box Rectangle and plot it
     height = bbox[3] - bbox[1]
@@ -268,9 +269,9 @@ def _plot_patch(ax, bbox, score, class_name, color):
     rect = patches.Rectangle((bbox[0], bbox[1]), width, height, linewidth=2, edgecolor=color, facecolor='none')
     ax.add_patch(rect)
 
-    # Add confidence score and class text to box
-    if score is not None:
+    # Add confidence prob and class text to box
+    if prob is not None:
         ax.text(bbox[0], bbox[1] - 2,
-                '{:s} {:.3f}'.format(class_name, score),
-                bbox=dict(facecolor='blue', alpha=0.5),
+                '{:s} {:.3f}'.format(class_name, prob),
+                bbox=dict(facecolor=color, alpha=0.5),
                 fontsize=8, color='white')

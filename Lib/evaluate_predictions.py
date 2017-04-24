@@ -77,10 +77,12 @@ def evaluate_predictions(test_image_object, data_directory, names, ovthresh=0.5)
         # Transform test_image_object into an np.array with all dets together.
         class_dets = test_image_object[c]
         all_dets = list()
-        for dets_list in class_dets:
+        for i, dets_list in enumerate(class_dets):
             if len(dets_list) == 0:
                 continue
             else:
+                cls_index = np.repeat(i, dets_list.shape[0]) # Index of Image
+                dets_list = np.hstack((dets_list, cls_index[:, np.newaxis]))
                 all_dets.extend(dets_list)
         all_dets = np.array(all_dets)
 

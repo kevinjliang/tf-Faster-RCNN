@@ -41,7 +41,7 @@ class FasterRcnnRes50(Model):
         self.epoch = flags_input['file_epoch'] if flags_input['restore'] else 0
         self.lr = flags['learning_rate']    
 
-        super().__init__(flags_input, flags_input['run_num'], vram=0.8, restore=flags_input['restore_num'], restore_slim=flags_input['restore_slim_file'])
+        super().__init__(flags_input, flags_input['run_num'], vram=cfg.VRAM, restore=flags_input['restore_num'], restore_slim=flags_input['restore_slim_file'])
    
         self.print_log(dictionary)
         self.print_log(flags_input)

@@ -119,11 +119,11 @@ def _applyBboxFlips(bbox, im_dims, flips):
     label = bbox[:, 4]
 
     if flips[0]:
-        x1 = im_dims[0,1] - bbox[:, 2]
-        x2 = im_dims[0,1] - bbox[:, 0]
+        x1 = im_dims[0,1] - 1 - bbox[:, 2]
+        x2 = im_dims[0,1] - 1 - bbox[:, 0]
     if flips[1]:
-        y1 = im_dims[0,0] - bbox[:, 3]
-        y2 = im_dims[0,0] - bbox[:, 1]
+        y1 = im_dims[0,0] - 1 - bbox[:, 3]
+        y2 = im_dims[0,0] - 1 - bbox[:, 1]
 
     return np.stack((x1, y1, x2, y2, label), axis=1)  
     
