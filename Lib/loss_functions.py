@@ -56,8 +56,6 @@ def rpn_bbox_loss(rpn_bbox_pred, rpn_bbox_targets, rpn_inside_weights, rpn_outsi
     L_reg: smoothL1 loss
     t_i: Parameterized prediction of bounding box
     t_i^*: Parameterized ground truth of closest bounding box
-    
-    TODO: rpn_inside_weights likely deprecated; might consider obliterating
     '''    
     # Constant for weighting bounding box loss with classification loss
     lam = cfg.TRAIN.RPN_BBOX_LAMBDA
@@ -69,7 +67,7 @@ def rpn_bbox_loss(rpn_bbox_pred, rpn_bbox_targets, rpn_inside_weights, rpn_outsi
     
     # How far off was the prediction?
     diff = tf.multiply(rpn_inside_weights, rpn_bbox_pred - rpn_bbox_targets)
-    diff_sL1 = smoothL1(diff)
+    diff_sL1 = smoothL1(diff, 3.0)
     
     # Only count loss for positive anchors. Make sure it's a sum.
     rpn_bbox_reg = tf.reduce_sum(tf.multiply(rpn_outside_weights, diff_sL1))
@@ -111,26 +109,27 @@ def fast_rcnn_bbox_loss(fast_rcnn_bbox_pred, bbox_targets, roi_inside_weights, r
     
     # How far off was the prediction?
     diff = tf.multiply(roi_inside_weights, fast_rcnn_bbox_pred - bbox_targets)
-    diff_sL1 = smoothL1(diff)
+    diff_sL1 = smoothL1(diff, 1.0)
     
     # Only count loss for positive anchors
-    roi_bbox_reg = tf.reduce_sum(tf.multiply(roi_outside_weights, diff_sL1))
+    roi_bbox_reg = tf.reduce_mean(tf.reduce_sum(tf.multiply(roi_outside_weights, diff_sL1), reduction_indices=[1]))
     
     return lam*roi_bbox_reg
     
     
-def smoothL1(x):
+def smoothL1(x, sigma):
     '''
     Tensorflow implementation of smooth L1 loss defined in Fast RCNN:
         (https://arxiv.org/pdf/1504.08083v2.pdf)
     
-                    0.5 x^2         if |x|<1
+                    0.5 * (sigma * x)^2         if |x| < 1/sigma^2
     smoothL1(x) = {
-                    |x| - 0.5       otherwise
+                    |x| - 0.5/sigma^2           otherwise
     '''
-    conditional = tf.less(tf.abs(x),1)
+    conditional = tf.less(tf.abs(x), 1/sigma**2)
     
-    close = 0.5 * x**2
-    far = tf.abs(x) - 0.5
+    close = 0.5 * (sigma * x)**2
+    far = tf.abs(x) - 0.5/sigma**2
 
-    return tf.where(conditional,close,far)
+    return tf.where(conditional, close, far)
+    
