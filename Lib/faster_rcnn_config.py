@@ -174,9 +174,6 @@ __C.TEST = edict()
 # Max pixel size of the longest side of a scaled input image
 #__C.TEST.MAX_SIZE = 1000
 
-# Overlap threshold used for non-maximum suppression (suppress boxes with
-# IoU >= this threshold)
-__C.TEST.NMS = 0.3
 
 # Test using bounding-box refinement in Fast R-CNN
 # Note: Should not be on if TRAIN.BBOX_REFINE is not also True
@@ -195,7 +192,8 @@ __C.TEST.RPN_POST_NMS_TOP_N = 300
 # Proposal height and width both need to be greater than RPN_MIN_SIZE (at orig image scale)
 __C.TEST.RPN_MIN_SIZE = 16
 
-# NMS threshold used post-refinement
+# NMS overlap threshold used post-refinement (suppress boxes with
+# IoU >= this threshold)
 __C.TEST.NMS = 0.3
 
 

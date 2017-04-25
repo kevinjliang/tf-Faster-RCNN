@@ -37,7 +37,7 @@ class FasterRcnnConv5(Model):
         self.epoch = flags_input['file_epoch'] if flags_input['restore'] else 0
         self.lr = flags['learning_rate']    
 
-        super().__init__(flags_input, flags_input['run_num'], vram=0.2, restore=flags_input['restore_num'])
+        super().__init__(flags_input, flags_input['run_num'], vram=cfg.VRAM, restore=flags_input['restore_num'])
    
         self.print_log(dictionary)
         self.print_log(flags_input)
@@ -110,7 +110,7 @@ class FasterRcnnConv5(Model):
         self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss + self.fast_rcnn_bbox_loss)
 
         # Total Loss
-        self.optimizer = tf.train.MomentumOptimizer(learning_rate=self.lr, momentum=0.9).minimize(self.cost)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(self.cost)
 
     def _summaries(self):
         """ Define summaries for TensorBoard """
@@ -166,10 +166,10 @@ class FasterRcnnConv5(Model):
             # Perform validation
             if self.epoch % cfg.VALID_RATE == 0: 
                 self.evaluate(test=False)
-            # Adjust learning rate
-            if self.epoch % cfg.TRAIN.LEARNING_RATE_DECAY_RATE == 0:
-                self.lr = self.lr/cfg.TRAIN.LEARNING_RATE_DECAY
-                self.print_log("Learning Rate: %f" % self.lr)
+#            # Adjust learning rate
+#            if self.epoch % cfg.TRAIN.LEARNING_RATE_DECAY_RATE == 0:
+#                self.lr = self.lr/cfg.TRAIN.LEARNING_RATE_DECAY
+#                self.print_log("Learning Rate: %f" % self.lr)
 
                 
     def evaluate(self, test=True):
