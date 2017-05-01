@@ -226,6 +226,12 @@ __C.VRAM = 0.8
 # Image file format ('.png', '.jpg')
 __C.IMAGE_FORMAT = '.png'
 
+# Pixel mean values (BGR order) as a (1, 1, 3) array
+# We use the same pixel mean for all networks even though it's not exactly what
+# they were trained with
+__C.SUBTRACT_PIXEL_MEANS = True
+__C.PIXEL_MEANS = np.array([[[102.9801, 115.9465, 122.7717]]])
+
 # How often to save TensorFlow checkpoint of model parameters (epochs)
 __C.CHECKPOINT_RATE = 1 
 # How often to evaluate on the validation set (epochs)

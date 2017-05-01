@@ -180,6 +180,13 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
     if len(image.shape) == 2:
         image = np.expand_dims(np.expand_dims(image, 0), 3)
     else:
+        # Flip RGB to BGR for pre-trained weights (OpenCV and Caffe are silly)
+        image = image[:, :, (2,1,0)]
+    
+        # Subtract pixel means
+        if cfg.SUBTRACT_PIXEL_MEANS:
+            image = image - cfg.PIXEL_MEANS
+            
         image = np.expand_dims(image, 0)
 
     im_dims = np.array(image.shape[1:3]).reshape([1, 2])

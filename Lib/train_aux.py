@@ -66,6 +66,13 @@ def create_feed_dict(data_directory, names, tf_inputs, image_index):
     if len(image.shape) == 2:
         image = np.expand_dims(np.expand_dims(image, 0), 3)
     else:
+        # Flip RGB to BGR for pre-trained weights (OpenCV and Caffe are silly)
+        image = image[:, :, (2,1,0)]
+    
+        # Subtract pixel means
+        if cfg.SUBTRACT_PIXEL_MEANS:
+            image = image - cfg.PIXEL_MEANS
+            
         image = np.expand_dims(image, 0)
     
     # Create TensorFlow feed dictionary
