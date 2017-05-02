@@ -1,6 +1,7 @@
 DATA_DIRECTORY: '../Data/pascal_voc2007/'
 MODEL_DIRECTORY: 'pascal_voc2007/'
 RESTORE_SLIM_FILE: '../../Data/ResNet50/resnet_v1_50.ckpt'
+DATASET: "pascal_voc"
 
 IMAGE_FORMAT: '.jpg'
 

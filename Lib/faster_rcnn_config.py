@@ -226,6 +226,9 @@ __C.VRAM = 0.8
 # Image file format ('.png', '.jpg')
 __C.IMAGE_FORMAT = '.png'
 
+# Dataset. Determines image preprocessing as defined in image_processing() in train_aux.py
+__C.DATASET = 'pascal_voc'
+
 # Pixel mean values (BGR order) as a (1, 1, 3) array
 # We use the same pixel mean for all networks even though it's not exactly what
 # they were trained with

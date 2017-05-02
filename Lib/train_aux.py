@@ -11,7 +11,7 @@ Helper functions for preprocessing data and training Faster RCNN
 from .faster_rcnn_config import cfg
 
 import numpy as np
-from scipy.misc import imread
+import PIL.Image
 
     
 def randomize_training_order(num_training):
@@ -43,7 +43,7 @@ def create_feed_dict(data_directory, names, tf_inputs, image_index):
     annotation_file = data_directory + 'Annotations/' + names[image_index] + '.txt'
 
     # Read data
-    image = imread(image_file)    
+    image = np.array(PIL.Image.open(image_file))
     gt_bbox = np.loadtxt(annotation_file, ndmin=2)
     
     # Image dimensions
@@ -61,31 +61,70 @@ def create_feed_dict(data_directory, names, tf_inputs, image_index):
     if cfg.TRAIN.USE_HORZ_FLIPPED or cfg.TRAIN.USE_HORZ_FLIPPED:
         image = _applyImageFlips(image, flips)
         gt_bbox = _applyBboxFlips(gt_bbox, im_dims, flips)
-        
-    # Expand image to 4 dimensions (batch, height, width, channels)
-    if len(image.shape) == 2:
-        image = np.expand_dims(np.expand_dims(image, 0), 3)
-    else:
-        # Flip RGB to BGR for pre-trained weights (OpenCV and Caffe are silly)
-        image = image[:, :, (2,1,0)]
-    
-        # Subtract pixel means
-        if cfg.SUBTRACT_PIXEL_MEANS:
-            image = image - cfg.PIXEL_MEANS
-            
-        image = np.expand_dims(image, 0)
-    
+
+    # Applies dataset-specific pre-processing to image
+    image = image_preprocessing(image)
+
     # Create TensorFlow feed dictionary
     feed_dict = {tf_inputs[0]: image, tf_inputs[1]: im_dims, tf_inputs[2]: gt_bbox}
                  
     return feed_dict
 
-
     
 ###############################################################################
 # Image processing functions
 ###############################################################################    
-    
+
+def image_preprocessing(image):
+    '''
+    Applies dataset-specific image pre-processing. Dataset specified in config file.
+
+    Args:
+        image (numpy array 2D/3D): image to be processed
+
+    Returns:
+        Preprocessed image
+    '''
+
+    if cfg.DATASET == "pascal_voc":
+        image = _rearrange_channels(image)
+        image = _subtract_ImageNet_pixel_means(image)
+
+    # Expand image to 4 dimensions (batch, height, width, channels)
+    if len(image.shape) == 2:
+        image = np.expand_dims(np.expand_dims(image, 0), 3)
+    else:
+        image = np.expand_dims(image, 0)
+
+    return image
+
+
+def _rearrange_channels(image):
+    '''
+    Flip RGB to BGR for pre-trained weights (OpenCV and Caffe are silly)
+
+    Args:
+        image (numpy array 3D)
+
+    Returns:
+        Rearranged image
+    '''
+    return image[:, :, (2, 1, 0)]
+
+
+def _subtract_ImageNet_pixel_means(image):
+    '''
+    Subtract ImageNet pixel means found in config file
+
+    Args:
+        image (numpy array 3D)
+
+    Returns:
+        Demeaned image
+    '''
+    return image - cfg.PIXEL_MEANS
+
+
 def _applyImageFlips(image, flips):
     '''
     Apply left-right and up-down flips to an image

@@ -15,6 +15,7 @@ Functions for testing Faster RCNN net after it's been trained
 # Written by Ross Girshick
 # --------------------------------------------------------
 
+from .train_aux import image_preprocessing
 from .bbox_transform import clip_boxes, bbox_transform_inv
 from .evaluate_predictions import evaluate_predictions, compute_iou
 from .faster_rcnn_config import cfg
@@ -27,7 +28,7 @@ import matplotlib.patches as patches
 import numpy as np
 import os
 import pickle
-from scipy.misc import imread
+import PIL.Image
 from tqdm import tqdm
 
 
@@ -75,7 +76,6 @@ def test_net(data_directory, names, sess, tf_inputs, tf_outputs, max_per_image=3
         return class_metrics
     else:
         return [0.0]*cfg.NUM_CLASSES
-    
 
 
 def _detect_boxes(data_directory, names, sess, tf_inputs, tf_outputs, thresh, det_dir, key, vis):
@@ -96,8 +96,7 @@ def _detect_boxes(data_directory, names, sess, tf_inputs, tf_outputs, thresh, de
             return all_boxes, detection_made
         else:
             assert overwrite.strip().lower() == 'y', 'Invalid input'
-    
-    
+
     # Ensure at least one detection is made or else an error will be thrown.
     detection_made = False
 
@@ -112,7 +111,7 @@ def _detect_boxes(data_directory, names, sess, tf_inputs, tf_outputs, thresh, de
 
         # Read in file
         im_file = data_directory + 'Images/' + names[i] + cfg.IMAGE_FORMAT
-        image = imread(im_file)
+        image = np.array(PIL.Image.open(im_file))
 
         # Perform Detection
         probs, boxes = _im_detect(sess, image, tf_inputs, tf_outputs)
@@ -177,17 +176,8 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
             [2] bbox_ref: Bounding box refinements by the RCNN
     """
 
-    if len(image.shape) == 2:
-        image = np.expand_dims(np.expand_dims(image, 0), 3)
-    else:
-        # Flip RGB to BGR for pre-trained weights (OpenCV and Caffe are silly)
-        image = image[:, :, (2,1,0)]
-    
-        # Subtract pixel means
-        if cfg.SUBTRACT_PIXEL_MEANS:
-            image = image - cfg.PIXEL_MEANS
-            
-        image = np.expand_dims(image, 0)
+    # Applies dataset specific pre-processing to image
+    image = image_preprocessing(image)
 
     im_dims = np.array(image.shape[1:3]).reshape([1, 2])
 
@@ -217,7 +207,6 @@ def _vis_detections(im, gt_boxes, dets, cls, filename=None, skip_background=True
     # Plot image
     fig, ax = plt.subplots(1)
     ax.imshow(im, cmap=cfg.TEST.CMAP)
-
 
     if gt_boxes is not None:    
         # Extract ground truth classes and boxes
