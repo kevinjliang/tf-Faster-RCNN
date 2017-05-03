@@ -11,7 +11,7 @@ Helper functions for preprocessing data and training Faster RCNN
 from .faster_rcnn_config import cfg
 
 import numpy as np
-import PIL.Image
+from scipy.misc import imread
 
     
 def randomize_training_order(num_training):
@@ -43,7 +43,7 @@ def create_feed_dict(data_directory, names, tf_inputs, image_index):
     annotation_file = data_directory + 'Annotations/' + names[image_index] + '.txt'
 
     # Read data
-    image = np.array(PIL.Image.open(image_file))
+    image = read_image(image_file)
     gt_bbox = np.loadtxt(annotation_file, ndmin=2)
     
     # Image dimensions
@@ -74,6 +74,11 @@ def create_feed_dict(data_directory, names, tf_inputs, image_index):
 ###############################################################################
 # Image processing functions
 ###############################################################################    
+
+def read_image(image_file):
+
+    if cfg.DATASET in ["pascal_voc", "cluttered_mnist"]:
+        return imread(image_file)
 
 def image_preprocessing(image):
     '''

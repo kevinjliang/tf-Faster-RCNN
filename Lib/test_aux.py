@@ -15,7 +15,7 @@ Functions for testing Faster RCNN net after it's been trained
 # Written by Ross Girshick
 # --------------------------------------------------------
 
-from .train_aux import image_preprocessing
+from .train_aux import image_preprocessing, read_image
 from .bbox_transform import clip_boxes, bbox_transform_inv
 from .evaluate_predictions import evaluate_predictions, compute_iou
 from .faster_rcnn_config import cfg
@@ -111,7 +111,7 @@ def _detect_boxes(data_directory, names, sess, tf_inputs, tf_outputs, thresh, de
 
         # Read in file
         im_file = data_directory + 'Images/' + names[i] + cfg.IMAGE_FORMAT
-        image = np.array(PIL.Image.open(im_file))
+        image = read_image(im_file)
 
         # Perform Detection
         probs, boxes = _im_detect(sess, image, tf_inputs, tf_outputs)
