@@ -28,7 +28,6 @@ import matplotlib.patches as patches
 import numpy as np
 import os
 import pickle
-import PIL.Image
 from tqdm import tqdm
 
 

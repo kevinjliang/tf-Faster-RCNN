@@ -77,8 +77,12 @@ def create_feed_dict(data_directory, names, tf_inputs, image_index):
 
 def read_image(image_file):
 
-    if cfg.DATASET in ["pascal_voc", "cluttered_mnist"]:
+    if cfg.IMAGE_BITDEPTH == 8:
         return imread(image_file)
+    else:
+        # If not 8-bit, implement your image reader for your data here, 
+        # and comment out the NotImplementedError exception 
+        raise NotImplementedError
 
 def image_preprocessing(image):
     '''
@@ -91,7 +95,7 @@ def image_preprocessing(image):
         Preprocessed image
     '''
 
-    if cfg.DATASET == "pascal_voc":
+    if cfg.NATURAL_IMAGE:
         image = _rearrange_channels(image)
         image = _subtract_ImageNet_pixel_means(image)
 

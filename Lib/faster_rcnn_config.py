@@ -225,14 +225,14 @@ __C.VRAM = 0.8
 
 # Image file format ('.png', '.jpg')
 __C.IMAGE_FORMAT = '.png'
+# Number of bits representing the image
+__C.IMAGE_BITDEPTH = 8
 
-# Dataset. Determines image preprocessing as defined in image_processing() in train_aux.py
-__C.DATASET = 'pascal_voc'
-
+# If dataset consists of natural images, subtract pixel means 
 # Pixel mean values (BGR order) as a (1, 1, 3) array
 # We use the same pixel mean for all networks even though it's not exactly what
 # they were trained with
-__C.SUBTRACT_PIXEL_MEANS = True
+__C.NATURAL_IMAGE = True
 __C.PIXEL_MEANS = np.array([[[102.9801, 115.9465, 122.7717]]])
 
 # How often to save TensorFlow checkpoint of model parameters (epochs)
