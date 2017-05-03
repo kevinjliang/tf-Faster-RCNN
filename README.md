@@ -1,4 +1,4 @@
-# tf-Faster-RCNN: *Work in progress (both the code and this README)*
+# tf-Faster-RCNN
 A Python 3.5 + TensorFlow v1.0 implementation of Faster R-CNN ([paper](https://arxiv.org/abs/1506.01497)). See official implementations here:
 - [Python + Caffe](https://github.com/rbgirshick/py-faster-rcnn)
 - [MATLAB + Caffe](https://github.com/ShaoqingRen/faster_rcnn)
@@ -119,19 +119,50 @@ In order to train (and then test) on your own data:
 
 Step 1 of the [cluttered MNIST demo](#simple-demo) automatically creates this data and organizes it accordingly, so run the `MNIST.py` script for an example file structure.
 
+#### *Optional: Pre-trained convolutional feature extractor weights*
+If you want to use pre-trained weights for the convolutional feature extractor (highly recommended), you have to download those [here](https://github.com/tensorflow/models/tree/master/slim#Pretrained). Currently, we have ResNet 50 V1 available; to use it, download the appropriate checkpoint file first.
+
 #### Configure the model
 The network architecture and model parameters depend on the kind of data you are trying to process. Most of these are adjustable from the config file. 
 
-Default settings and their descriptions are located at [Lib/faster_rcnn_config.py](https://github.com/kevinjliang/tf-Faster-RCNN/blob/master/Lib/faster_rcnn_config.py). You should not modify this. Instead, write a yaml file, save it under Models/cfgs, and pass it as an argument to your model. See [Models/cfgs/clutteredMNIST.yml](https://github.com/kevinjliang/tf-Faster-RCNN/blob/master/Models/cfgs/clutteredMNIST.yml) as an example.
+Default settings and their descriptions are located at [Lib/faster_rcnn_config.py](https://github.com/kevinjliang/tf-Faster-RCNN/blob/master/Lib/faster_rcnn_config.py). You should not modify this. Instead, write a yaml file, save it under Models/cfgs, and pass it as an argument to your model. See [Models/cfgs/](https://github.com/kevinjliang/tf-Faster-RCNN/tree/master/Models/cfgs) for examples.
 
 In particular, make sure to change the following:
 - Point `DATA_DIRECTORY` to your dataset folder (denoted by [YOUR_DATASET] in the earlier file tree). Make this path relative to the [Models/](https://github.com/kevinjliang/tf-Faster-RCNN/tree/master/Models) directory.
+- *Optional*: Point `RESTORE_SLIM_FILE` to the location of the checkpoint file you downloaded, if using pre-trained weights for the convolutional feature extractor.
 - Change `CLASSES` to a list of the class names in your data. IMPORTANT: Leave the first class as '__background__'
 - Update `NUM_CLASSES` to the number of classes in `CLASSES`
 
 The model file you use depends on the data you wish to train on. For something like the simple, single-channeled cluttered MNIST, [Model/faster_rcnn_conv5.py](https://github.com/kevinjliang/tf-Faster-RCNN/blob/master/Models/faster_rcnn_conv5.py) is probably sufficient. More complex, RGB-channeled real data like PASCAL VOC, MS COCO, or ImageNet require a correspondingly more advanced architecture ([example](https://github.com/kevinjliang/tf-Faster-RCNN/blob/master/Models/faster_rcnn_resnet50ish.py)).
 
+Make sure that the number of channels of the input placeholder in the `_data` constructor function matches your data. `faster_rcnn_conv5.py` is defaulted to a single channel (grayscale). `faster_rcnn_resnet50ish.py` is three channels (RGB).
 
 #### Train and Test
-...to be continued (see demo for now)
+To train the model (assuming`faster_rcnn_resnet50ish.py`):
+  ```Shell
+  python faster_rcnn_resnet50ish.py [arguments]
+  ```
+
+Additional arguments (defaults in parentheses; see main() of a model file for additional comments):
+- [-n]: Run number (0) - Log files and checkpoints will be saved under this ID number
+- [-e]: Epochs (1) - Number of epochs to train the model
+- [-r]: Restore (0) - Restore all weights from a specific run number ID (a previous -n) and checkpoint number if equal to 1. Additional specifications in -m and -f (see below)
+- [-m]: Model Restore (1) - Specifies which previous run number ID (a previous -n) to restore from
+- [-f]: File Epoch (1) - Specifies which epoch checkpoint to restore from
+- [-s]: Slim (1) - For models with pre-trained weights, load weights from a downloaded checkpoint if equal to 1
+- [-t]: Train (1) - Train the model if equal to 1 (Set this to 0 if you only want to evaluate)
+- [-v]: Eval (1) - Evaluate the model if equal to 1
+- [-y]: YAML (pascal_voc2007.yml) - Name of the YAML file in the `Models/cfg/` folder to override [faster_rcnn_config.py](https://github.com/kevinjliang/tf-Faster-RCNN/blob/master/Lib/faster_rcnn_config.py) defaults
+- [-l]: Learning Rate (1e-3) - Initial Learning Rate (You should actually probably specify this in your YAML, not here)
+- [-i]: Visualize (0) - Project output bounding boxes onto your images and save under `Data/[YOUR_DATASET]/Outputs` if equal to 1
+- [-g]: GPU (0) - Specify which GPU to use. Input 'all' to use all available GPUs.
+
+Common use cases:
+  ```Shell
+  # Train model, starting from pre-trained weights
+  python faster_rcnn_resnet50ish.py -n 10 -e 20 -y 'myYAML.yml'
+  
+  # Test model, using a previously trained model (0). Save output images with boxes
+  python faster_rcnn_resnet50ish.py -n 11 -r 1 -m 10 -f 18 -t 0 -i 1 -y 'myYAML.yml'
+  ```
 
