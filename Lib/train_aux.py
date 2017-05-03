@@ -9,9 +9,9 @@ Helper functions for preprocessing data and training Faster RCNN
 """
 
 from .faster_rcnn_config import cfg
+from .image_functions import read_image, _applyImageFlips, _applyBboxFlips, image_preprocessing
 
 import numpy as np
-from scipy.misc import imread
 
     
 def randomize_training_order(num_training):
@@ -69,116 +69,3 @@ def create_feed_dict(data_directory, names, tf_inputs, image_index):
     feed_dict = {tf_inputs[0]: image, tf_inputs[1]: im_dims, tf_inputs[2]: gt_bbox}
                  
     return feed_dict
-
-    
-###############################################################################
-# Image processing functions
-###############################################################################    
-
-def read_image(image_file):
-
-    if cfg.IMAGE_BITDEPTH == 8:
-        return imread(image_file)
-    else:
-        # If not 8-bit, implement your image reader for your data here, 
-        # and comment out the NotImplementedError exception 
-        raise NotImplementedError
-
-def image_preprocessing(image):
-    '''
-    Applies dataset-specific image pre-processing. Dataset specified in config file.
-
-    Args:
-        image (numpy array 2D/3D): image to be processed
-
-    Returns:
-        Preprocessed image
-    '''
-
-    if cfg.NATURAL_IMAGE:
-        image = _rearrange_channels(image)
-        image = _subtract_ImageNet_pixel_means(image)
-
-    # Expand image to 4 dimensions (batch, height, width, channels)
-    if len(image.shape) == 2:
-        image = np.expand_dims(np.expand_dims(image, 0), 3)
-    else:
-        image = np.expand_dims(image, 0)
-
-    return image
-
-
-def _rearrange_channels(image):
-    '''
-    Flip RGB to BGR for pre-trained weights (OpenCV and Caffe are silly)
-
-    Args:
-        image (numpy array 3D)
-
-    Returns:
-        Rearranged image
-    '''
-    return image[:, :, (2, 1, 0)]
-
-
-def _subtract_ImageNet_pixel_means(image):
-    '''
-    Subtract ImageNet pixel means found in config file
-
-    Args:
-        image (numpy array 3D)
-
-    Returns:
-        Demeaned image
-    '''
-    return image - cfg.PIXEL_MEANS
-
-
-def _applyImageFlips(image, flips):
-    '''
-    Apply left-right and up-down flips to an image
-    
-    Args:
-        image (numpy array 2D/3D): image to be flipped
-        flips (tuple):
-            [0]: Boolean to flip horizontally
-            [1]: Boolean to flip vertically
-
-    Returns:
-        Flipped image
-    '''
-    image = np.fliplr(image) if flips[0] else image
-    image = np.flipud(image) if flips[1] else image
-
-    return image
-    
-    
-def _applyBboxFlips(bbox, im_dims, flips):
-    '''
-    Apply left-right and up-down flips to bounding box
-    
-    Args:
-        bbox (np.2darray): [[x1, y1, x2, y2, label]]
-        im_dims (list): (height, width)
-        flips (tuple):
-            [0]: Boolean to flip horizontally
-            [1]: Boolean to flip vertically
-            
-    Returns:
-        Bounding box information for flipped image
-    '''
-    x1 = bbox[:, 0]    
-    y1 = bbox[:, 1]    
-    x2 = bbox[:, 2]    
-    y2 = bbox[:, 3]    
-    label = bbox[:, 4]
-
-    if flips[0]:
-        x1 = im_dims[0,1] - 1 - bbox[:, 2]
-        x2 = im_dims[0,1] - 1 - bbox[:, 0]
-    if flips[1]:
-        y1 = im_dims[0,0] - 1 - bbox[:, 3]
-        y2 = im_dims[0,0] - 1 - bbox[:, 1]
-
-    return np.stack((x1, y1, x2, y2, label), axis=1)  
-    

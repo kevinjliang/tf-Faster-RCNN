@@ -15,10 +15,10 @@ Functions for testing Faster RCNN net after it's been trained
 # Written by Ross Girshick
 # --------------------------------------------------------
 
-from .train_aux import image_preprocessing, read_image
 from .bbox_transform import clip_boxes, bbox_transform_inv
 from .evaluate_predictions import evaluate_predictions, compute_iou
 from .faster_rcnn_config import cfg
+from .image_functions import image_preprocessing, vis_preprocessing, read_image
 from .nms_wrapper import nms
 
 import matplotlib
@@ -202,7 +202,9 @@ def _im_detect(sess, image, tf_inputs, tf_outputs):
 
 def _vis_detections(im, gt_boxes, dets, cls, filename=None, skip_background=True):
     """Visual debugging of detections."""
-
+    # Perform preprocessing (or not)
+    im = vis_preprocessing(im)
+    
     # Plot image
     fig, ax = plt.subplots(1)
     ax.imshow(im, cmap=cfg.TEST.CMAP)
