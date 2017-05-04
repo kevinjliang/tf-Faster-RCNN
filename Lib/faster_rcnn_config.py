@@ -2,7 +2,7 @@
 """
 Created on Sun Jan  1 20:47:15 2017
 
-@author: Kevin Liang
+@author: Kevin Liang (Modifications)
 """
 
 # --------------------------------------------------------
@@ -18,9 +18,7 @@ This file specifies default config options for Faster R-CNN. You should not
 change values in this file. Instead, you should write a config file (in yaml)
 and use cfg_from_file(yaml_file) to load it and override the default options.
 
-Most tools in $ROOT/tools take a --cfg option to specify an override file.
-    - See tools/{train,test}_net.py for example code that uses cfg_from_file()
-    - See experiments/cfgs/*.yml for example YAML config override files
+Examples of YAML cfg files are located in Models/cfgs.
 """
 
 import os
@@ -199,7 +197,7 @@ __C.TEST.NMS = 0.3
 
 # Evaluate with test ground truth (Turn off for deployment, when you don't have gt info)
 __C.TEST.GROUNDTRUTH = True
-# Plot ground truth boxes on output images. (Turn off of gt boxes are creating too much clutter)
+# Plot ground truth boxes on output images. (Turn off if gt boxes are creating too much clutter)
 __C.TEST.PLOT_GROUNDTRUTH = True
 # Output image colormap (cmap argument to matplotlib.pyplot.imshow())
 # Default of 'jet' is standard RGB
@@ -218,7 +216,7 @@ __C.SAVE_DIRECTORY = '../Logs/'
 # Model directory under logging directory, where 'Model[n]' folder is created
 __C.MODEL_DIRECTORY = 'FRCNN/'
 # TF Slim restore file for resnet50
-__C.RESTORE_SLIM_FILE = ""
+__C.RESTORE_SLIM_FILE = '../Data/'
 
 # How much of GPU memory to use (TensorFlow tries to take up entire GPU by default)
 __C.VRAM = 0.8

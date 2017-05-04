@@ -207,7 +207,11 @@ def _vis_detections(im, gt_boxes, dets, cls, filename=None, skip_background=True
     
     # Plot image
     fig, ax = plt.subplots(1)
-    ax.imshow(im, cmap=cfg.TEST.CMAP)
+    
+    if len(im.shape) == 3 and cfg.TEST.CMAP != 'jet':
+        ax.imshow(im[:,:,0], cmap=cfg.TEST.CMAP)    
+    else:
+        ax.imshow(im, cmap=cfg.TEST.CMAP)
 
     if gt_boxes is not None:    
         # Extract ground truth classes and boxes
