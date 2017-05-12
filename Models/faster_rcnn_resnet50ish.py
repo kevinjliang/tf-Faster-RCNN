@@ -177,7 +177,7 @@ class FasterRcnnRes50(Model):
                 self.evaluate(test=False)
 #            # Adjust learning rate
 #            if self.epoch % cfg.TRAIN.LEARNING_RATE_DECAY_RATE == 0:
-#                self.lr = self.lr/cfg.TRAIN.LEARNING_RATE_DECAY
+#                self.lr = self.lr * cfg.TRAIN.LEARNING_RATE_DECAY
 #                self.print_log("Learning Rate: %f" % self.lr)
                         
 
