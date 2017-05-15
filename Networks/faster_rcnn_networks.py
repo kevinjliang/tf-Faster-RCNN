@@ -15,8 +15,6 @@ import sys
 
 sys.path.append('../')
 
-from Lib.TensorBase.tensorbase.base import Layers
-
 from Lib.faster_rcnn_config import cfg
 from Lib.loss_functions import rpn_cls_loss, rpn_bbox_loss, fast_rcnn_cls_loss, fast_rcnn_bbox_loss
 from Lib.roi_pool import roi_pool
@@ -25,6 +23,7 @@ from Networks.anchor_target_layer import anchor_target_layer
 from Networks.proposal_layer import proposal_layer
 from Networks.proposal_target_layer import proposal_target_layer
 
+import tensorflow.contrib.layers as tcl
 import tensorflow as tf
 
 
@@ -55,44 +54,41 @@ class rpn:
 
         _num_anchors = len(self.anchor_scales)*3
 
-        rpn_layers = Layers(self.featureMaps)
-
+        features = self.featureMaps
         with tf.variable_scope('rpn'):
             # Spatial windowing
             for i in range(len(cfg.RPN_OUTPUT_CHANNELS)):
-                rpn_layers.conv2d(filter_size=cfg.RPN_FILTER_SIZES[i], output_channels=cfg.RPN_OUTPUT_CHANNELS[i])
-                
-            features = rpn_layers.get_output()
+                features = tcl.conv2d(inputs=features, num_outputs=cfg.RPN_OUTPUT_CHANNELS[i],
+                                      kernel_size=cfg.RPN_FILTER_SIZES[i])
 
             with tf.variable_scope('cls'):
                 # Box-classification layer (objectness)
-                self.rpn_bbox_cls_layers = Layers(features)
-                self.rpn_bbox_cls_layers.conv2d(filter_size=1, output_channels=_num_anchors*2, activation_fn=None)
+                self.rpn_cls_score = tcl.conv2d(inputs=features, num_outputs=_num_anchors*2, kernel_size=1,
+                                                activation_fn=None)
 
             with tf.variable_scope('target'):
                 # Only calculate targets in train mode. No ground truth boxes in evaluation mode
                 if self.eval_mode is False:
                     # Anchor Target Layer (anchors and deltas)
-                    rpn_cls_score = self.rpn_bbox_cls_layers.get_output()
                     self.rpn_labels, self.rpn_bbox_targets, self.rpn_bbox_inside_weights, self.rpn_bbox_outside_weights = \
-                        anchor_target_layer(rpn_cls_score=rpn_cls_score, gt_boxes=self.gt_boxes, im_dims=self.im_dims,
+                        anchor_target_layer(rpn_cls_score=self.rpn_cls_score, gt_boxes=self.gt_boxes, im_dims=self.im_dims,
                                             _feat_stride=self._feat_stride, anchor_scales=self.anchor_scales)
 
             with tf.variable_scope('bbox'):
                 # Bounding-Box regression layer (bounding box predictions)
-                self.rpn_bbox_pred_layers = Layers(features)
-                self.rpn_bbox_pred_layers.conv2d(filter_size=1, output_channels=_num_anchors*4, activation_fn=None)
+                self.rpn_bbox_pred = tcl.conv2d(inputs=features, num_outputs=_num_anchors*4, kernel_size=1,
+                                                activation_fn=None)
 
     # Get functions
     def get_rpn_cls_score(self):
-        return self.rpn_bbox_cls_layers.get_output()
+        return self.rpn_cls_score
 
     def get_rpn_labels(self):
         assert self.eval_mode is False, 'No RPN labels without ground truth boxes'
         return self.rpn_labels
 
     def get_rpn_bbox_pred(self):
-        return self.rpn_bbox_pred_layers.get_output()
+        return self.rpn_bbox_pred
 
     def get_rpn_bbox_targets(self):
         assert self.eval_mode is False, 'No RPN bounding box targets without ground truth boxes'
@@ -200,41 +196,35 @@ class fast_rcnn:
 
     def _network(self):
         with tf.variable_scope('fast_rcnn'):
-            # No dropout in evaluation mode
-            keep_prob = cfg.FRCNN_DROPOUT_KEEP_RATE if self.eval_mode is False else 1.0
 
             # ROI pooling
-            pooledFeatures = roi_pool(self.featureMaps, self.rois, self.im_dims)
+            pooled_features = roi_pool(self.featureMaps, self.rois, self.im_dims)
 
             # Fully Connect layers (with dropout)
             with tf.variable_scope('fc'):
-                self.rcnn_fc_layers = Layers(pooledFeatures)
-                self.rcnn_fc_layers.flatten()
+                features = tcl.flatten(pooled_features)
                 for i in range(len(cfg.FRCNN_FC_HIDDEN)):
-                    self.rcnn_fc_layers.fc(output_nodes=cfg.FRCNN_FC_HIDDEN[i], keep_prob=keep_prob)
-
-                hidden = self.rcnn_fc_layers.get_output()
+                    features = tcl.fully_connected(inputs=features, num_outputs=cfg.FRCNN_FC_HIDDEN[i])
 
             # Classifier score
             with tf.variable_scope('cls'):
-                self.rcnn_cls_layers = Layers(hidden)
-                self.rcnn_cls_layers.fc(output_nodes=self.num_classes, activation_fn=None)
-
+                self.rcnn_cls_score = tcl.fully_connected(inputs=features, num_outputs=self.num_classes,
+                                                          activation_fn=None)
             # Bounding Box refinement
             with tf.variable_scope('bbox'):
-                self.rcnn_bbox_layers = Layers(hidden)
-                self.rcnn_bbox_layers.fc(output_nodes=self.num_classes*4, activation_fn=None)
+                self.rcnn_bbox_refine = tcl.fully_connected(inputs=features, num_outputs=self.num_classes*4,
+                                                            activation_fn=None)
 
     # Get functions
     def get_cls_score(self):
-        return self.rcnn_cls_layers.get_output()
+        return self.rcnn_cls_score
 
     def get_cls_prob(self):
         logits = self.get_cls_score()
         return tf.nn.softmax(logits)
 
     def get_bbox_refinement(self):
-        return self.rcnn_bbox_layers.get_output()
+        return self.rcnn_bbox_refine
 
     # Loss functions
     def get_fast_rcnn_cls_loss(self):
