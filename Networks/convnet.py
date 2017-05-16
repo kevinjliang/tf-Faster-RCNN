@@ -14,7 +14,7 @@ Built on TensorBase: https://github.com/kevinjliang/TensorBase
 import sys
 sys.path.append('../')
 
-from Lib.TensorBase.tensorbase.base import Layers
+import tensorflow.contrib.layers as tcl
 
 import numpy as np
 import tensorflow as tf
@@ -30,11 +30,9 @@ class convnet:
         else:
             self.strides = np.ones([1,self.depth])
             
-        self.network = self._network(x)
+        self.output = self._network(x)
         
     def _network(self, x):
-        conv_layers = Layers(x)
-        
         # Make sure that number of layers is consistent
         assert len(self.output_channels) == self.depth
         assert len(self.strides) == self.depth
@@ -43,16 +41,12 @@ class convnet:
         scope = 'convnet' + str(self.depth)
         with tf.variable_scope(scope):
             for l in range(self.depth):
-                conv_layers.conv2d(filter_size=self.filter_sizes[l], 
-                                   output_channels=self.output_channels[l], 
-                                   stride=self.strides[l],
-                                   padding='SAME',
-                                   b_value=None)
-        
-        return conv_layers
+                x = tcl.conv2d(inputs=x, kernel_size=self.filter_sizes[l], num_outputs=self.output_channels[l],
+                           stride=self.strides[l])
+        return x
         
     def get_output(self):
-        return self.network.get_output()
+        return self.output
         
     def get_feat_stride(self):
         return np.prod(self.strides)
