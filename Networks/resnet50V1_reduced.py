@@ -4,7 +4,7 @@ Created on Thurs Feb 9 10:55:07 2017
 
 @author: Dan Salo
 
-ResNet-50 feature extractor from TF-Slim
+ResNet-50 (V1) feature extractor from TF-Slim
 
 Last bottleneck group block has been removed 
 """
@@ -36,7 +36,7 @@ def bottleneck(inputs, depth, depth_bottleneck, stride, rate=1, outputs_collecti
     return slim.utils.collect_named_outputs(outputs_collections, sc.original_name_scope, output)
 
 
-def resnet50_reduced(inputs, is_training=True, output_stride=None, include_root_block=True, reuse=None, scope=None):
+def resnet50V1_reduced(inputs, is_training=True, output_stride=None, include_root_block=True, reuse=None, scope=None):
 
     # These are the blocks for resnet 50
     blocks = [resnet_utils.Block(

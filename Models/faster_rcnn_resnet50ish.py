@@ -18,7 +18,7 @@ from Lib.faster_rcnn_config import cfg, cfg_from_file
 from Lib.test_aux import test_net
 from Lib.train_aux import randomize_training_order, create_feed_dict
 
-from Networks.resnet50_reduced import resnet50_reduced
+from Networks.resnet50V2_reduced import resnet50V2_reduced
 from Networks.faster_rcnn_networks import rpn, roi_proposal, fast_rcnn
 
 from tensorflow.contrib.slim.python.slim.nets import resnet_utils
@@ -61,13 +61,13 @@ class FasterRcnnRes50(Model):
         self.im_dims = {}
 
         # Train data
-        self.x['TRAIN'] = tf.placeholder(tf.float32, [1, None, None, 3])
-        self.im_dims['TRAIN'] = tf.placeholder(tf.int32, [None, 2])
-        self.gt_boxes['TRAIN'] = tf.placeholder(tf.int32, [None, 5])
+        self.x['TRAIN'] = tf.placeholder(tf.float32, [1, None, None, 3], name='image_train')
+        self.im_dims['TRAIN'] = tf.placeholder(tf.int32, [None, 2], name='im_dims_train')
+        self.gt_boxes['TRAIN'] = tf.placeholder(tf.int32, [None, 5], name='gt_boxes_train')
         
         # Validation and Test data. No GT Boxes.
-        self.x['EVAL'] = tf.placeholder(tf.float32, [1, None, None, 3])
-        self.im_dims['EVAL'] = tf.placeholder(tf.int32, [None, 2])
+        self.x['EVAL'] = tf.placeholder(tf.float32, [1, None, None, 3], name='image_eval')
+        self.im_dims['EVAL'] = tf.placeholder(tf.int32, [None, 2], name='im_dims_eval')
 
     def _network(self):
         """ Define the network outputs """
@@ -90,11 +90,9 @@ class FasterRcnnRes50(Model):
         eval_mode = True if (key == 'EVAL') else False
           
         # CNN Feature extractor
-        feature_maps = resnet50_reduced(x)
+        feature_maps = resnet50V2_reduced(x, is_training=(not eval_mode))
         # CNN downsampling factor
         _feat_stride = 16           
-
-        self.print_log(feature_maps)
         
         # Region Proposal Network (RPN)
         self.rpn_net[key] = rpn(feature_maps, gt_boxes, im_dims, _feat_stride, eval_mode)
@@ -120,8 +118,10 @@ class FasterRcnnRes50(Model):
         decay_steps = cfg.TRAIN.LEARNING_RATE_DECAY_RATE*len(self.names['TRAIN'])         # Number of Epochs x images/epoch
         learning_rate = tf.train.exponential_decay(learning_rate=self.lr, global_step=self.step, 
                                                    decay_steps=decay_steps, decay_rate=cfg.TRAIN.LEARNING_RATE_DECAY, staircase=True)
+                
         # Optimizer: ADAM
         self.optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=0.1).minimize(self.cost)
+        
         
     def _summaries(self):
         """ Define summaries for TensorBoard """
@@ -276,7 +276,7 @@ def main():
 
     if args['yaml'] != 'default': 
         dictionary = cfg_from_file('cfgs/' + args['yaml'])
-        print('Restoring from %s file' % args['yaml'])
+        print('Overriding default parameters with values from %s file' % args['yaml'])
     else:
         dictionary = []
         print('Using Default settings')
