@@ -29,9 +29,9 @@ import tensorflow as tf
 
 class rpn:
     '''
-    Region Proposal Network (RPN): From the convolutional feature maps
-    (TensorBase Layers object) of the last layer, generate bounding boxes
-    relative to anchor boxes and give an "objectness" score to each
+    Region Proposal Network (RPN): From the convolutional feature maps of the 
+    last layer, generate bounding boxes relative to anchor boxes and give an 
+    "objectness" score to each
 
     In evaluation mode (eval_mode==True), gt_boxes should be None.
     '''
@@ -58,25 +58,36 @@ class rpn:
         with tf.variable_scope('rpn'):
             # Spatial windowing
             for i in range(len(cfg.RPN_OUTPUT_CHANNELS)):
-                features = tcl.conv2d(inputs=features, num_outputs=cfg.RPN_OUTPUT_CHANNELS[i],
-                                      kernel_size=cfg.RPN_FILTER_SIZES[i])
-
+                # 2D Conv -> Batch Normalization -> ReLU
+                features = tcl.conv2d(inputs=features, 
+                                      num_outputs=cfg.RPN_OUTPUT_CHANNELS[i],
+                                      kernel_size=cfg.RPN_FILTER_SIZES[i], 
+                                      activation_fn=tf.nn.relu,
+                                      normalizer_fn=tcl.batch_norm, 
+                                      normalizer_params={'is_training':not self.eval_mode})
+                
+            # Box-classification layer (objectness)
             with tf.variable_scope('cls'):
-                # Box-classification layer (objectness)
-                self.rpn_cls_score = tcl.conv2d(inputs=features, num_outputs=_num_anchors*2, kernel_size=1,
+                # Only 2D Conv
+                self.rpn_cls_score = tcl.conv2d(inputs=features, 
+                                                num_outputs=_num_anchors*2, 
+                                                kernel_size=1,
                                                 activation_fn=None)
 
+            # Anchor Target Layer (anchors and deltas)
             with tf.variable_scope('target'):
                 # Only calculate targets in train mode. No ground truth boxes in evaluation mode
                 if self.eval_mode is False:
-                    # Anchor Target Layer (anchors and deltas)
                     self.rpn_labels, self.rpn_bbox_targets, self.rpn_bbox_inside_weights, self.rpn_bbox_outside_weights = \
                         anchor_target_layer(rpn_cls_score=self.rpn_cls_score, gt_boxes=self.gt_boxes, im_dims=self.im_dims,
                                             _feat_stride=self._feat_stride, anchor_scales=self.anchor_scales)
 
+            # Bounding-Box regression layer (bounding box predictions)
             with tf.variable_scope('bbox'):
-                # Bounding-Box regression layer (bounding box predictions)
-                self.rpn_bbox_pred = tcl.conv2d(inputs=features, num_outputs=_num_anchors*4, kernel_size=1,
+                # Only 2D Conv
+                self.rpn_bbox_pred = tcl.conv2d(inputs=features, 
+                                                num_outputs=_num_anchors*4, 
+                                                kernel_size=1,
                                                 activation_fn=None)
 
     # Get functions
@@ -204,15 +215,25 @@ class fast_rcnn:
             with tf.variable_scope('fc'):
                 features = tcl.flatten(pooled_features)
                 for i in range(len(cfg.FRCNN_FC_HIDDEN)):
-                    features = tcl.fully_connected(inputs=features, num_outputs=cfg.FRCNN_FC_HIDDEN[i])
+                    # FC -> Batch Normalization -> ReLU [Commented out:-> Dropout]
+                    features = tcl.fully_connected(inputs=features, 
+                                                   num_outputs=cfg.FRCNN_FC_HIDDEN[i],
+                                                   activation_fn=tf.nn.relu,
+                                                   normalizer_fn=tcl.batch_norm, 
+                                                   normalizer_params={'is_training':not self.eval_mode})
+#                    features = tcl.dropout(inputs=features,
+#                                           keep_prob=cfg.FRCNN_DROPOUT_KEEP_RATE,
+#                                           is_training=not self.eval_mode)                    
 
             # Classifier score
             with tf.variable_scope('cls'):
-                self.rcnn_cls_score = tcl.fully_connected(inputs=features, num_outputs=self.num_classes,
+                self.rcnn_cls_score = tcl.fully_connected(inputs=features, 
+                                                          num_outputs=self.num_classes,
                                                           activation_fn=None)
             # Bounding Box refinement
             with tf.variable_scope('bbox'):
-                self.rcnn_bbox_refine = tcl.fully_connected(inputs=features, num_outputs=self.num_classes*4,
+                self.rcnn_bbox_refine = tcl.fully_connected(inputs=features, 
+                                                            num_outputs=self.num_classes*4,
                                                             activation_fn=None)
 
     # Get functions

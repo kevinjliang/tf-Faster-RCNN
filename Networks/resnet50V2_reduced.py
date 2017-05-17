@@ -18,7 +18,6 @@ import tensorflow as tf
 from tensorflow.contrib.slim.python.slim.nets import resnet_utils
 
 slim = tf.contrib.slim
-resnet_arg_scope = resnet_utils.resnet_arg_scope
 
 @slim.add_arg_scope
 def bottleneck(inputs, depth, depth_bottleneck, stride, rate=1, outputs_collections=None, scope=None):
@@ -64,3 +63,39 @@ def resnet50V2_reduced(inputs, is_training=True, output_stride=None, include_roo
     with slim.arg_scope([slim.batch_norm], is_training=is_training) as scope:
         net = slim.batch_norm(net, activation_fn=tf.nn.relu, scope='postnorm')
     return net
+
+def resnet_arg_scope(weight_decay=0.0001,
+                     batch_norm_decay=0.997,
+                     batch_norm_epsilon=1e-5,
+                     batch_norm_scale=True,
+                     is_training=True):
+  """Defines the default ResNet arg scope.
+  Args:
+    weight_decay: The weight decay to use for regularizing the model.
+    batch_norm_decay: The moving average decay when estimating layer activation
+      statistics in batch normalization.
+    batch_norm_epsilon: Small constant to prevent division by zero when
+      normalizing activations by their variance in batch normalization.
+    batch_norm_scale: If True, uses an explicit `gamma` multiplier to scale the
+      activations in the batch normalization layer.
+  Returns:
+    An `arg_scope` to use for the resnet models.
+  """
+  batch_norm_params = {
+      'decay': batch_norm_decay,
+      'epsilon': batch_norm_epsilon,
+      'scale': batch_norm_scale,
+      'is_training': is_training,
+      'updates_collections': tf.GraphKeys.UPDATE_OPS,
+  }
+
+  with slim.arg_scope(
+      [slim.conv2d],
+      weights_regularizer=slim.l2_regularizer(weight_decay),
+      weights_initializer=slim.variance_scaling_initializer(),
+      activation_fn=tf.nn.relu,
+      normalizer_fn=slim.batch_norm,
+      normalizer_params=batch_norm_params):
+    with slim.arg_scope([slim.batch_norm], **batch_norm_params):
+      with slim.arg_scope([slim.max_pool2d], padding='SAME') as arg_sc:
+        return arg_sc

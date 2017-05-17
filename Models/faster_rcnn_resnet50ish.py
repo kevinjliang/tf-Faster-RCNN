@@ -4,7 +4,7 @@ Created on Sat Dec 31 13:22:36 2016
 
 @author: Kevin Liang
 
-Faster R-CNN model using ResNet50 as the convolutional feature extractor. 
+Faster R-CNN model using ResNet50 V2 as the convolutional feature extractor. 
 Option to use ImageNet pre-trained weights
 
 Note: We take the feature maps before the last ResNet block
@@ -18,7 +18,7 @@ from Lib.faster_rcnn_config import cfg, cfg_from_file
 from Lib.test_aux import test_net
 from Lib.train_aux import randomize_training_order, create_feed_dict
 
-from Networks.resnet50V2_reduced import resnet50V2_reduced
+from Networks.resnet50V2_reduced import resnet50V2_reduced, resnet_arg_scope
 from Networks.faster_rcnn_networks import rpn, roi_proposal, fast_rcnn
 
 from tensorflow.contrib.slim.python.slim.nets import resnet_utils
@@ -30,7 +30,7 @@ import argparse
 import os
 
 slim = tf.contrib.slim
-resnet_arg_scope = resnet_utils.resnet_arg_scope
+# resnet_arg_scope = resnet_utils.resnet_arg_scope
 
 # Global Dictionary of Flags: Populated in main() with cfg defaults
 flags = {}
@@ -45,7 +45,6 @@ class FasterRcnnRes50(Model):
    
         self.print_log(dictionary)
         self.print_log(flags_input)
-        self.threads, self.coord = Data.init_threads(self.sess)
 
     def _data(self):
         # Data list for each split
@@ -78,21 +77,21 @@ class FasterRcnnRes50(Model):
 
         # Train network
         with tf.variable_scope("model"):
-            with slim.arg_scope(resnet_arg_scope()):
-                self._faster_rcnn(self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'], 'TRAIN')
+            self._faster_rcnn(self.x['TRAIN'], self.gt_boxes['TRAIN'], self.im_dims['TRAIN'], 'TRAIN')
 
         with tf.variable_scope("model", reuse=True):
-            with slim.arg_scope(resnet_arg_scope()):
-                self._faster_rcnn(self.x['EVAL'], None, self.im_dims['EVAL'], 'EVAL')
+            self._faster_rcnn(self.x['EVAL'], None, self.im_dims['EVAL'], 'EVAL')
 
     def _faster_rcnn(self, x, gt_boxes, im_dims, key):
         # VALID and TEST are both evaluation mode
         eval_mode = True if (key == 'EVAL') else False
-          
-        # CNN Feature extractor
-        feature_maps = resnet50V2_reduced(x, is_training=(not eval_mode))
-        # CNN downsampling factor
-        _feat_stride = 16           
+        
+        with slim.arg_scope(resnet_arg_scope(is_training=(not eval_mode))):
+            # CNN Feature extractor
+            feature_maps = resnet50V2_reduced(x, is_training=(not eval_mode))
+
+            # CNN downsampling factor
+            _feat_stride = 16           
         
         # Region Proposal Network (RPN)
         self.rpn_net[key] = rpn(feature_maps, gt_boxes, im_dims, _feat_stride, eval_mode)
@@ -119,8 +118,14 @@ class FasterRcnnRes50(Model):
         learning_rate = tf.train.exponential_decay(learning_rate=self.lr, global_step=self.step, 
                                                    decay_steps=decay_steps, decay_rate=cfg.TRAIN.LEARNING_RATE_DECAY, staircase=True)
                 
+        # Update dependencies for batch normalization
+        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        
+        # Select only training BN ops        
+        update_ops = [var for var in update_ops if 'model' in var.name.split('/')]
         # Optimizer: ADAM
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=0.1).minimize(self.cost)
+        with tf.control_dependencies(update_ops):
+            self.optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=0.1).minimize(self.cost)
         
         
     def _summaries(self):
@@ -183,7 +188,7 @@ class FasterRcnnRes50(Model):
 
     def evaluate(self, test=True):
         """ Evaluate network on the validation set. """
-        key = 'TEST' if test is True else 'VALID'
+        key = 'TEST' if test else 'VALID'
 
         print('Detecting images in %s set' % key)
 
