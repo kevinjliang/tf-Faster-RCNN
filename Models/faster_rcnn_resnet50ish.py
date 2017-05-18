@@ -18,10 +18,10 @@ from Lib.faster_rcnn_config import cfg, cfg_from_file
 from Lib.test_aux import test_net
 from Lib.train_aux import randomize_training_order, create_feed_dict
 
-from Networks.resnet50V2_reduced import resnet50V2_reduced, resnet_arg_scope
+from Networks.resnet50V1_reduced import resnet50V1_reduced, resnet_arg_scope
 from Networks.faster_rcnn_networks import rpn, roi_proposal, fast_rcnn
 
-from tensorflow.contrib.slim.python.slim.nets import resnet_utils
+#from tensorflow.contrib.slim.python.slim.nets import resnet_utils
 from tqdm import tqdm, trange
 
 import numpy as np
@@ -82,7 +82,7 @@ class FasterRcnnRes50(Model):
         
         with slim.arg_scope(resnet_arg_scope(is_training=(not eval_mode))):
             # CNN Feature extractor
-            feature_maps = resnet50V2_reduced(x, is_training=(not eval_mode))
+            feature_maps = resnet50V1_reduced(x, is_training=(not eval_mode))
 
             # CNN downsampling factor
             _feat_stride = 16           
@@ -116,8 +116,6 @@ class FasterRcnnRes50(Model):
         # Update dependencies for batch normalization
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         
-        # Select only training BN ops        
-        update_ops = [var for var in update_ops if 'model' in var.name.split('/')]
         # Optimizer: ADAM
         with tf.control_dependencies(update_ops):
             self.optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=0.1).minimize(self.cost)
