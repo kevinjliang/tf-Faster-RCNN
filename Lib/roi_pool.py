@@ -21,22 +21,23 @@ def roi_pool(featureMaps,rois,im_dims):
     
     Note: Since mini-batches are sampled from a single image, image_id = 0s
     '''
-    # Image that the ROI is taken from (minibatch of 1 means these will all be 0)
-    box_ind = tf.cast(rois[:,0],dtype=tf.int32)
-    
-    # ROI box coordinates. Must be normalized and ordered to [y1, x1, y2, x2]
-    boxes = rois[:,1:]
-    normalization = tf.cast(tf.stack([im_dims[:,1],im_dims[:,0],im_dims[:,1],im_dims[:,0]],axis=1),dtype=tf.float32)
-    boxes = tf.div(boxes,normalization)
-    boxes = tf.stack([boxes[:,1],boxes[:,0],boxes[:,3],boxes[:,2]],axis=1)  # y1, x1, y2, x2
-    
-    # ROI pool output size
-    crop_size = tf.constant([14,14])
-    
-    # ROI pool
-    pooledFeatures = tf.image.crop_and_resize(image=featureMaps, boxes=boxes, box_ind=box_ind, crop_size=crop_size)
-    
-    # Max pool to (7x7)
-    pooledFeatures = tf.nn.max_pool(pooledFeatures, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+    with tf.variable_scope('roi_pool'):
+        # Image that the ROI is taken from (minibatch of 1 means these will all be 0)
+        box_ind = tf.cast(rois[:,0],dtype=tf.int32)
+        
+        # ROI box coordinates. Must be normalized and ordered to [y1, x1, y2, x2]
+        boxes = rois[:,1:]
+        normalization = tf.cast(tf.stack([im_dims[:,1],im_dims[:,0],im_dims[:,1],im_dims[:,0]],axis=1),dtype=tf.float32)
+        boxes = tf.div(boxes,normalization)
+        boxes = tf.stack([boxes[:,1],boxes[:,0],boxes[:,3],boxes[:,2]],axis=1)  # y1, x1, y2, x2
+        
+        # ROI pool output size
+        crop_size = tf.constant([14,14])
+        
+        # ROI pool
+        pooledFeatures = tf.image.crop_and_resize(image=featureMaps, boxes=boxes, box_ind=box_ind, crop_size=crop_size)
+        
+        # Max pool to (7x7)
+        pooledFeatures = tf.nn.max_pool(pooledFeatures, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     return pooledFeatures
