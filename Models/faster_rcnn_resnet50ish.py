@@ -183,10 +183,9 @@ class FasterRcnnRes50(Model):
                       self.fast_rcnn_net['EVAL'].get_cls_prob(),
                       self.fast_rcnn_net['EVAL'].get_bbox_refinement())
 
-        class_metrics = test_net(flags['DATA_DIRECTORY'], self.names[key], self.sess, tf_inputs, tf_outputs,
+        class_metrics = test_net(self.flags['DATA_DIRECTORY'], self.names[key], self.sess, tf_inputs, tf_outputs,
                                  key=key, thresh=0.5, vis=self.flags['VIS'])
         self.record_eval_metrics(class_metrics, key)
-
         
     def record_eval_metrics(self, class_metrics, key, display_APs=True):
         """ Record evaluation metrics and print to log and terminal """
