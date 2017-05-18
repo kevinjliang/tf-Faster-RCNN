@@ -1,6 +1,6 @@
 DATA_DIRECTORY: '../Data/pascal_voc2007/'
 MODEL_DIRECTORY: 'pascal_voc2007/'
-RESTORE_SLIM_FILE: '../../Data/ResNet50/resnet_v2_50.ckpt'
+RESTORE_SLIM_FILE: '../../Data/ResNet50/resnet_v1_50.ckpt'
 
 IMAGE_FORMAT: '.jpg'
 
@@ -15,6 +15,8 @@ NUM_CLASSES: 21
 FRCNN_FC_HIDDEN: [4096,4096]
 
 DISPLAY_RATE: 1000
+
+VRAM: 0.48
 
 TRAIN:
   LEARNING_RATE: 0.003
