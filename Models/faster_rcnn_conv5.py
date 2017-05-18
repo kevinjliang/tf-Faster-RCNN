@@ -129,8 +129,7 @@ class FasterRcnnConv5(Model):
         self.print_log('Training for %d epochs' % self.flags['NUM_EPOCHS'])
         
         tf_inputs = (self.x['TRAIN'], self.im_dims['TRAIN'], self.gt_boxes['TRAIN'])
-        
-        self.step += 1
+
         for self.epoch in trange(1, self.flags['NUM_EPOCHS']+1, desc='epochs'):
             train_order = randomize_training_order(len(self.names['TRAIN']))
             
