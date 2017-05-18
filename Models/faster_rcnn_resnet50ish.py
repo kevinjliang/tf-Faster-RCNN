@@ -13,15 +13,14 @@ Note: We take the feature maps before the last ResNet block
 import sys
 sys.path.append('../')
 
-from Lib.TensorBase.tensorbase.base import Model, Data
-from Lib.faster_rcnn_config import cfg, cfg_from_file
+from Lib.TensorBase.tensorbase.base import Model
+from Lib.faster_rcnn_config import cfg
 from Lib.test_aux import test_net
 from Lib.train_aux import randomize_training_order, create_feed_dict
 
 from Networks.resnet50V1_reduced import resnet50V1_reduced, resnet_arg_scope
 from Networks.faster_rcnn_networks import rpn, roi_proposal, fast_rcnn
 
-#from tensorflow.contrib.slim.python.slim.nets import resnet_utils
 from tqdm import tqdm, trange
 
 import numpy as np
@@ -30,7 +29,6 @@ import argparse
 import os
 
 slim = tf.contrib.slim
-# resnet_arg_scope = resnet_utils.resnet_arg_scope
 
 # Global Dictionary of Flags: Populated in main() with cfg defaults
 flags = {}
@@ -98,14 +96,15 @@ class FasterRcnnRes50(Model):
 
     def _optimizer(self):
         """ Define losses and initialize optimizer """
-        # Losses (come from TRAIN networks)
-        self.rpn_cls_loss = self.rpn_net['TRAIN'].get_rpn_cls_loss()
-        self.rpn_bbox_loss = self.rpn_net['TRAIN'].get_rpn_bbox_loss()
-        self.fast_rcnn_cls_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_cls_loss()
-        self.fast_rcnn_bbox_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_bbox_loss() * cfg.TRAIN.BBOX_REFINE
-
-        # Total Loss
-        self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss + self.fast_rcnn_bbox_loss)
+        with tf.variable_scope("losses"):
+            # Losses (come from TRAIN networks)
+            self.rpn_cls_loss = self.rpn_net['TRAIN'].get_rpn_cls_loss()
+            self.rpn_bbox_loss = self.rpn_net['TRAIN'].get_rpn_bbox_loss()
+            self.fast_rcnn_cls_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_cls_loss()
+            self.fast_rcnn_bbox_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_bbox_loss() * cfg.TRAIN.BBOX_REFINE
+    
+            # Total Loss
+            self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss + self.fast_rcnn_bbox_loss)
 
         # Optimizer arguments
         decay_steps = cfg.TRAIN.LEARNING_RATE_DECAY_RATE*len(self.names['TRAIN'])         # Number of Epochs x images/epoch
