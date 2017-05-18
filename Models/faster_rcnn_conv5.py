@@ -13,7 +13,7 @@ Reorganizing a few things relative to faster_rcnn_conv5
 import sys
 sys.path.append('../')
 
-from Lib.TensorBase.tensorbase.base import Model, Data
+from Lib.TensorBase.tensorbase.base import Model
 from Lib.faster_rcnn_config import cfg, cfg_from_file
 from Lib.test_aux import test_net
 from Lib.train_aux import randomize_training_order, create_feed_dict
@@ -28,28 +28,17 @@ import os
 from tqdm import tqdm, trange
 
 
-# Global Dictionary of Flags: Populated in main() with cfg defaults
-flags = {}
-
-
 class FasterRcnnConv5(Model):
-    def __init__(self, flags_input, dictionary):
-        self.epoch = flags_input['file_epoch'] if flags_input['restore'] else 0
-        self.lr = flags['learning_rate']    
-
-        super().__init__(flags_input, flags_input['run_num'], vram=cfg.VRAM, restore=flags_input['restore_num'])
-   
-        self.print_log(dictionary)
-        self.print_log(flags_input)
-        self.threads, self.coord = Data.init_threads(self.sess)
+    def __init__(self, flags_input, cfg_dict):
+        self.epoch = flags_input['FILE_EPOCH'] if flags_input['RESTORE_META'] == 1 else 0
+        super().__init__(flags_input, cfg_dict)
+        self.flags = self.get_flags()
 
     def _data(self):
         # Data list for each split
-        self.names = {
-                      'TRAIN': self._read_names(flags['data_directory'] + 'Names/train.txt'),
-                      'VALID': self._read_names(flags['data_directory'] + 'Names/valid.txt'),
-                      'TEST': self._read_names(flags['data_directory'] + 'Names/test.txt')
-                     }
+        self.names = {'TRAIN': self._read_names(self.flags['DATA_DIRECTORY'] + 'Names/train.txt'),
+                      'VALID': self._read_names(self.flags['DATA_DIRECTORY'] + 'Names/valid.txt'),
+                      'TEST': self._read_names(self.flags['DATA_DIRECTORY'] + 'Names/test.txt')}
                      
         # Initialize placeholder dicts
         self.x = {}
@@ -112,8 +101,9 @@ class FasterRcnnConv5(Model):
 
         # Optimizer arguments
         decay_steps = cfg.TRAIN.LEARNING_RATE_DECAY_RATE*len(self.names['TRAIN'])         # Number of Epochs x images/epoch
-        learning_rate = tf.train.exponential_decay(learning_rate=self.lr, global_step=self.step, 
-                                                   decay_steps=decay_steps, decay_rate=cfg.TRAIN.LEARNING_RATE_DECAY, staircase=True)
+        learning_rate = tf.train.exponential_decay(learning_rate=cfg.TRAIN.LEARNING_RATE, global_step=self.step,
+                                                   decay_steps=decay_steps, decay_rate=cfg.TRAIN.LEARNING_RATE_DECAY,
+                                                   staircase=True)
         # Optimizer: ADAM
         self.optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(self.cost)
 
@@ -124,13 +114,6 @@ class FasterRcnnConv5(Model):
         tf.summary.scalar("RPN_bbox_Loss", self.rpn_bbox_loss)
         tf.summary.scalar("Fast_RCNN_Cls_Loss", self.fast_rcnn_cls_loss)
         tf.summary.scalar("Fast_RCNN_Bbox_Loss", self.fast_rcnn_bbox_loss)
-#        tf.summary.image("x_train", self.x['TRAIN'])
-
-        
-    def _run_train_iter(self, feed_dict):
-        """ Run training iteration"""
-        summary, _ = self.sess.run([self.merged, self.optimizer], feed_dict=feed_dict)
-        return summary
 
     def _record_train_metrics(self, feed_dict):
         """ Run training iteration and record training metrics """
@@ -139,43 +122,35 @@ class FasterRcnnConv5(Model):
                                                                       feed_dict=feed_dict)     
         self.print_log('Step %d: total loss=%.6f, rpn_cls loss=%.6f, rpn_bbox loss=%.6f, rcnn_cls loss=%.6f, rcnn_bbox loss=%.6f' %
                        (self.step, loss, loss1, loss2, loss3, loss4))
-        
         return summary
 
     def train(self):
         """ Run training function. Save model upon completion """
-        self.print_log('Training for %d epochs' % self.flags['num_epochs'])
+        self.print_log('Training for %d epochs' % self.flags['NUM_EPOCHS'])
         
         tf_inputs = (self.x['TRAIN'], self.im_dims['TRAIN'], self.gt_boxes['TRAIN'])
-        
-        self.step += 1
-        for self.epoch in trange(1, self.flags['num_epochs']+1, desc='epochs'):
+
+        for self.epoch in trange(1, self.flags['NUM_EPOCHS']+1, desc='epochs'):
             train_order = randomize_training_order(len(self.names['TRAIN']))
             
             for i in tqdm(train_order):
-                feed_dict = create_feed_dict(flags['data_directory'], self.names['TRAIN'], tf_inputs, i)
+                feed_dict = create_feed_dict(self.flags['DATA_DIRECTORY'], self.names['TRAIN'], tf_inputs, i)
                 
                 # Run a training iteration
-                if self.step % (self.flags['display_step']) == 0:
-                    # Record training metrics every display_step interval
+                if self.step % cfg.DISPLAY_RATE == 0:
+                    # Record training metrics every DISPLAY_RATE interval
                     summary = self._record_train_metrics(feed_dict)
                     self._record_training_step(summary)
-                else: 
-                    summary = self._run_train_iter(feed_dict)
+                else:
+                    summary, _ = self.sess.run([self.merged, self.optimizer], feed_dict=feed_dict)
                     self._record_training_step(summary)             
             
-            ## Epoch finished
-            # Save model 
+            # Epoch finishe; save model
             if self.epoch % cfg.CHECKPOINT_RATE == 0: 
                 self._save_model(section=self.epoch)
             # Perform validation
             if self.epoch % cfg.VALID_RATE == 0: 
                 self.evaluate(test=False)
-#            # Adjust learning rate
-#            if self.epoch % cfg.TRAIN.LEARNING_RATE_DECAY_RATE == 0:
-#                self.lr = self.lr * cfg.TRAIN.LEARNING_RATE_DECAY
-#                self.print_log("Learning Rate: %f" % self.lr)
-
                 
     def evaluate(self, test=True):
         """ Evaluate network on the validation set. """
@@ -188,9 +163,9 @@ class FasterRcnnConv5(Model):
                       self.fast_rcnn_net['EVAL'].get_cls_prob(),
                       self.fast_rcnn_net['EVAL'].get_bbox_refinement())
 
-        class_metrics = test_net(flags['data_directory'], self.names[key], self.sess, tf_inputs, tf_outputs, key=key, thresh=0.5, vis=self.flags['vis'])
+        class_metrics = test_net(self.flags['DATA_DIRECTORY'], self.names[key], self.sess, tf_inputs, tf_outputs,
+                                 key=key, thresh=0.5, vis=self.flags['VIS'])
         self.record_eval_metrics(class_metrics, key)
-        
 
     def record_eval_metrics(self, class_metrics, key, display_APs=True):
         """ Record evaluation metrics and print to log and terminal """
@@ -201,7 +176,7 @@ class FasterRcnnConv5(Model):
         mAP = np.mean(class_metrics)
         self.print_log("Mean Average Precision on " + key + " Set: %f" % mAP)
         
-        fname = self.flags['logging_directory'] + key + '_Accuracy.txt'
+        fname = self.flags['LOGGING_DIRECTORY'] + key + '_Accuracy.txt'
         if os.path.isfile(fname):
             self.print_log("Appending to " + key + " file")
             file = open(fname, 'a')
@@ -213,78 +188,37 @@ class FasterRcnnConv5(Model):
         file.close()
 
     def _read_names(self, names_file):
-        ''' Read the names.txt file and return a list of all bags '''
+        """ Read the names.txt file and return a list of all bags """
         with open(names_file) as f:
             names = f.read().splitlines()
         return names
 
-    def _print_metrics(self):
-        self.print_log("Learning Rate: %f" % self.lr)
-        self.print_log("Epochs: %d" % self.flags['num_epochs'])
-
-    def close(self):
-        Data.exit_threads(self.threads, self.coord)
-   
-        
-
-def update_flags():
-    flags['data_directory'] = cfg.DATA_DIRECTORY        # Location of training/testing files
-    flags['save_directory'] = cfg.SAVE_DIRECTORY        # Where to create model_directory folder
-    flags['model_directory'] = cfg.MODEL_DIRECTORY      # Where to create 'Model[n]' folder
-    flags['batch_size'] = cfg.TRAIN.IMS_PER_BATCH       # Image batch size (should be 1) 
-    flags['display_step'] = cfg.DISPLAY_RATE            # How often to display loss
-    flags['learning_rate'] = cfg.TRAIN.LEARNING_RATE    # Optimizer Learning Rate
-    
 
 def main():
-    flags['seed'] = 1234
-
     # Parse Arguments
     parser = argparse.ArgumentParser(description='Faster R-CNN Networks Arguments')
-    parser.add_argument('-n', '--run_num', default=0)  # Saves all under /save_directory/model_directory/Model[n]
-    parser.add_argument('-e', '--epochs', default=1)  # Number of epochs for which to train the model
-    parser.add_argument('-r', '--restore', default=0)  # Binary to restore from a model. 0 = No restore.    
-    parser.add_argument('-m', '--model_restore', default=1)  # Restores from /save_directory/model_directory/Model[n]
-    parser.add_argument('-f', '--file_epoch', default=1)  # Restore filename: 'part_[f].ckpt.meta'
-    parser.add_argument('-t', '--train', default=1)  # Binary to train model. 0 = No train.
-    parser.add_argument('-v', '--eval', default=1)  # Binary to evalulate model. 0 = No eval.
-    parser.add_argument('-y', '--yaml', default='clutteredMNIST.yml')  # YAML file to override config defaults
-    parser.add_argument('-l', '--learn_rate', default=1e-3)  # learning Rate # TODO: move this to cfg
-    parser.add_argument('-i', '--vis', default=0)  # enable visualizations
-    parser.add_argument('-g', '--gpu', default=0)  # specifiy which GPU to use
-    args = vars(parser.parse_args())
+    parser.add_argument('-n', '--RUN_NUM', default=0, type=int)  # Saves all under /save_directory/model_directory/Model[n]
+    parser.add_argument('-e', '--NUM_EPOCHS', default=1, type=int)  # Number of epochs for which to train the model
+    parser.add_argument('-r', '--RESTORE_META', default=0, type=int)  # Binary to restore from a model. 0 = No restore.
+    parser.add_argument('-m', '--MODEL_RESTORE', default=1, type=int)  # Restores from /save_directory/model_directory/Model[n]
+    parser.add_argument('-f', '--FILE_EPOCH', default=1, type=int)  # Restore filename: 'part_[f].ckpt.meta'
+    parser.add_argument('-t', '--TRAINING', default=1, type=int)  # Binary to train model. 0 = No train.
+    parser.add_argument('-v', '--EVAL', default=1, type=int)  # Binary to evalulate model. 0 = No eval.
+    parser.add_argument('-y', '--YAML_FILE', default='clutteredMNIST.yml', type=str)  # YAML file to override config defaults
+    parser.add_argument('-i', '--VIS', default=0, type=int)  # enable visualizations
+    parser.add_argument('-g', '--GPU', default=0, type=int)  # specifiy which GPU to use. Defaults to only one GPU.
+    flags = vars(parser.parse_args())
 
     # Set Arguments
-    flags['run_num'] = int(args['run_num'])
-    flags['num_epochs'] = int(args['epochs'])
-    
-    flags['restore_num'] = int(args['model_restore'])
-    flags['file_epoch'] = int(args['file_epoch'])
-    
-    if args['restore'] == 0:
-        flags['restore'] = False
-    else:
-        flags['restore'] = True
-        flags['restore_file'] = 'part_' + str(args['file_epoch']) + '.ckpt.meta'
+    flags['SEED'] = 1234
+    flags['VIS'] = True if (flags['VIS'] == 1) else False
+    flags['YAML_FILE'] = 'cfgs/' + flags['YAML_FILE']
 
-    if args['yaml'] != 'default': 
-        dictionary = cfg_from_file('cfgs/' + args['yaml'])
-        print('Restoring from %s file' % args['yaml'])
-    else:
-        dictionary = []
-        print('Using Default settings')
-    update_flags()
-        
-    flags['learning_rate'] = float(args['learn_rate'])
-    flags['vis'] = True if (int(args['vis']) == 1) else False
-    flags['gpu'] = int(args['gpu'])
-    
-    model = FasterRcnnConv5(flags, dictionary)
-    if int(args['train']) == 1:
+    model = FasterRcnnConv5(flags, cfg)
+    if flags['TRAINING'] == 1:
         model.train()
-    if int(args['eval']) == 1:
+    if flags['EVAL'] == 1:
         model.evaluate()
-    model.close()
 
 
 if __name__ == "__main__":
