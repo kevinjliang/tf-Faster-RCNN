@@ -195,7 +195,7 @@ class FasterRcnnRes50(Model):
         mAP = np.mean(class_metrics)
         self.print_log("Mean Average Precision on " + key + " Set: %f" % mAP)
         
-        fname = self.flags['logging_directory'] + key + '_Accuracy.txt'
+        fname = self.flags['LOGGING_DIRECTORY'] + key + '_Accuracy.txt'
         if os.path.isfile(fname):
             self.print_log("Appending to " + key + " file")
             file = open(fname, 'a')

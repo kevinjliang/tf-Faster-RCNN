@@ -157,7 +157,8 @@ __C.TRAIN.RPN_BBOX_LAMBDA = 10.0
 # Relative weight of Fast RCNN bounding box loss
 __C.TRAIN.FRCNN_BBOX_LAMBDA = 1.0
 
-
+# Relative weight of Fast RCNN bounding box loss
+__C.TRAIN.WEIGHT_DECAY = 0.0001
 
 ###############################################################################
 # Testing options
