@@ -66,9 +66,9 @@ __C.TRAIN = edict()
 # Learning rate
 __C.TRAIN.LEARNING_RATE = 0.001
 # Learning rate decay factor
-__C.TRAIN.LEARNING_RATE_DECAY = 0.5
+__C.TRAIN.LEARNING_RATE_DECAY = 2
 # Number of epochs before decaying learning rate 
-__C.TRAIN.LEARNING_RATE_DECAY_RATE = 10
+__C.TRAIN.LEARNING_RATE_DECAY_RATE = 1
 
 
 # Scales to use during training (can list multiple scales)
