@@ -35,17 +35,36 @@ def bottleneck(inputs, depth, depth_bottleneck, stride, rate=1, outputs_collecti
 
     return slim.utils.collect_named_outputs(outputs_collections, sc.original_name_scope, output)
 
+def resnet_v1_block(scope, base_depth, num_units, stride):
+    """Helper function for creating a resnet_v1 bottleneck block.
+    Args:
+        scope: The scope of the block.
+        base_depth: The depth of the bottleneck layer for each unit.
+        num_units: The number of units in the block.
+        stride: The stride of the block, implemented as a stride in the last unit.
+        All other units have stride=1.
+        Returns:
+            A resnet_v1 bottleneck block.
+    """
+    return resnet_utils.Block(scope, bottleneck, [{
+            'depth': base_depth * 4,
+            'depth_bottleneck': base_depth,
+            'stride': 1
+            }] * (num_units - 1) + [{
+                    'depth': base_depth * 4,
+                    'depth_bottleneck': base_depth,
+                    'stride': stride
+                    }])
 
 def resnet50V1_reduced(inputs, is_training=True, output_stride=None, include_root_block=True, reuse=None, scope=None):
 
     # These are the blocks for resnet 50
-    blocks = [resnet_utils.Block(
-            'block1', bottleneck, [(256, 64, 1)] * 2 + [(256, 64, 2)]),
-        resnet_utils.Block(
-            'block2', bottleneck, [(512, 128, 1)] * 3 + [(512, 128, 2)]),
-        resnet_utils.Block(
-            'block3', bottleneck, [(1024, 256, 1)] * 5)]
-
+    blocks = [
+        resnet_v1_block('block1', base_depth=64, num_units=3, stride=2),
+        resnet_v1_block('block2', base_depth=128, num_units=4, stride=2),
+        resnet_v1_block('block3', base_depth=256, num_units=6, stride=2),
+#        resnet_v1_block('block4', base_depth=512, num_units=3, stride=1),
+        ]
     # Initialize Model
     with tf.variable_scope(scope, 'resnet_v1_50', [inputs], reuse=reuse):
         with slim.arg_scope([slim.conv2d, bottleneck, resnet_utils.stack_blocks_dense]):

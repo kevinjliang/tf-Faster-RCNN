@@ -66,9 +66,9 @@ __C.TRAIN = edict()
 # Learning rate
 __C.TRAIN.LEARNING_RATE = 0.001
 # Learning rate decay factor
-__C.TRAIN.LEARNING_RATE_DECAY = 0.5
+__C.TRAIN.LEARNING_RATE_DECAY = 2
 # Number of epochs before decaying learning rate 
-__C.TRAIN.LEARNING_RATE_DECAY_RATE = 10
+__C.TRAIN.LEARNING_RATE_DECAY_RATE = 1
 
 
 # Scales to use during training (can list multiple scales)
@@ -157,7 +157,8 @@ __C.TRAIN.RPN_BBOX_LAMBDA = 10.0
 # Relative weight of Fast RCNN bounding box loss
 __C.TRAIN.FRCNN_BBOX_LAMBDA = 1.0
 
-
+# Relative weight of Fast RCNN bounding box loss
+__C.TRAIN.WEIGHT_DECAY = 0.0001
 
 ###############################################################################
 # Testing options
