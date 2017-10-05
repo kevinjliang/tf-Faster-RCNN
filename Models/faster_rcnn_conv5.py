@@ -14,7 +14,7 @@ import sys
 sys.path.append('../')
 
 from Lib.TensorBase.tensorbase.base import Model
-from Lib.faster_rcnn_config import cfg, cfg_from_file
+from Lib.faster_rcnn_config import cfg
 from Lib.test_aux import test_net
 from Lib.train_aux import randomize_training_order, create_feed_dict
 
@@ -46,18 +46,17 @@ class FasterRcnnConv5(Model):
         self.im_dims = {}
 
         # Train data
-        self.x['TRAIN'] = tf.placeholder(tf.float32, [1, None, None, 1])
-        self.im_dims['TRAIN'] = tf.placeholder(tf.int32, [None, 2])
-        self.gt_boxes['TRAIN'] = tf.placeholder(tf.int32, [None, 5])
+        self.x['TRAIN'] = tf.placeholder(tf.float32, [1, None, None, 1], name='image_train')
+        self.im_dims['TRAIN'] = tf.placeholder(tf.int32, [None, 2], name='im_dims_train')
+        self.gt_boxes['TRAIN'] = tf.placeholder(tf.int32, [None, 5], name='gt_boxes_train')
         
         # Validation and Test data. No GT Boxes.
-        self.x['EVAL'] = tf.placeholder(tf.float32, [1, None, None, 1])
-        self.im_dims['EVAL'] = tf.placeholder(tf.int32, [None, 2])
+        self.x['EVAL'] = tf.placeholder(tf.float32, [1, None, None, 1], name='image_eval')
+        self.im_dims['EVAL'] = tf.placeholder(tf.int32, [None, 2], name='im_dims_eval')
 
     def _network(self):
         """ Define the network outputs """
         # Initialize network dicts
-        self.cnn = {}
         self.rpn_net = {}
         self.roi_proposal_net = {}
         self.fast_rcnn_net = {}
@@ -75,9 +74,9 @@ class FasterRcnnConv5(Model):
         # VALID and TEST are both evaluation mode
         eval_mode = True if (key == 'EVAL') else False
 
-        self.cnn[key] = convnet(x, [5, 3, 3, 3, 3], [32, 64, 64, 128, 128], strides=[2, 2, 1, 2, 1])
-        feature_maps = self.cnn[key].get_output()
-        _feat_stride = self.cnn[key].get_feat_stride()
+        cnn = convnet(x, [5, 3, 3, 3, 3], [32, 64, 64, 128, 128], strides=[2, 2, 1, 2, 1])
+        feature_maps = cnn.get_output()
+        _feat_stride = cnn.get_feat_stride()
 
         # Region Proposal Network (RPN)
         self.rpn_net[key] = rpn(feature_maps, gt_boxes, im_dims, _feat_stride, eval_mode)
@@ -90,14 +89,15 @@ class FasterRcnnConv5(Model):
     
     def _optimizer(self):
         """ Define losses and initialize optimizer """
-        # Losses (come from TRAIN networks)
-        self.rpn_cls_loss = self.rpn_net['TRAIN'].get_rpn_cls_loss()
-        self.rpn_bbox_loss = self.rpn_net['TRAIN'].get_rpn_bbox_loss()
-        self.fast_rcnn_cls_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_cls_loss()
-        self.fast_rcnn_bbox_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_bbox_loss() * cfg.TRAIN.BBOX_REFINE
-
-        # Total Loss
-        self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss + self.fast_rcnn_bbox_loss)
+        with tf.variable_scope("losses"):
+            # Losses (come from TRAIN networks)
+            self.rpn_cls_loss = self.rpn_net['TRAIN'].get_rpn_cls_loss()
+            self.rpn_bbox_loss = self.rpn_net['TRAIN'].get_rpn_bbox_loss()
+            self.fast_rcnn_cls_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_cls_loss()
+            self.fast_rcnn_bbox_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_bbox_loss() * cfg.TRAIN.BBOX_REFINE
+    
+            # Total Loss
+            self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss + self.fast_rcnn_bbox_loss)
 
         # Optimizer arguments
         decay_steps = cfg.TRAIN.LEARNING_RATE_DECAY_RATE*len(self.names['TRAIN'])         # Number of Epochs x images/epoch
@@ -215,6 +215,7 @@ def main():
     flags['YAML_FILE'] = 'cfgs/' + flags['YAML_FILE']
 
     model = FasterRcnnConv5(flags, cfg)
+    
     if flags['TRAINING'] == 1:
         model.train()
     if flags['EVAL'] == 1:

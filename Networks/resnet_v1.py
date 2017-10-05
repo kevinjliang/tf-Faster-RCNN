@@ -19,7 +19,7 @@ from Lib.faster_rcnn_config import cfg
 
 
 def resnet_arg_scope(trainable=True,
-                     weight_decay=cfg.TRAIN.WEIGHT_DECAY,
+                     weight_decay=0.0001,
                      batch_norm_decay=0.997,
                      batch_norm_epsilon=1e-5,
                      batch_norm_scale=True):

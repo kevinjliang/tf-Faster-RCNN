@@ -1,5 +1,5 @@
 # tf-Faster-RCNN
-A Python 3.5+/TensorFlow v1.0 implementation of Faster R-CNN ([paper](https://arxiv.org/abs/1506.01497)). See official implementations here:
+A Python 3/TensorFlow implementation of Faster R-CNN ([paper](https://arxiv.org/abs/1506.01497)). See official implementations here:
 - [Python + Caffe](https://github.com/rbgirshick/py-faster-rcnn)
 - [MATLAB + Caffe](https://github.com/ShaoqingRen/faster_rcnn)
 
@@ -18,15 +18,15 @@ The deep models in this implementation are built on [TensorBase](https://github.
 2. Python 3.5+: I recommend Anaconda for your Python distribution and package management. See (3) below.
 3. TensorFlow v1.0: See [TensorFlow Installation with Anaconda](https://www.tensorflow.org/install/install_linux#InstallingAnaconda). Install the version that matches your preferred Python version. Instructions for Python 3.6 below:
   ```Shell
-  # Create a Conda environment for TensorFlow v1.0 (defaults to Python 3.6)
+  # Create a Conda environment for TensorFlow (defaults to Python 3.6)
   conda create --name tensorflow 
   
-  # Activate your enviroment
+  # Activate your environment
   source activate tensorflow
   
-  # Install TensorFlow v1.0, for Python 3.6 with GPU support
+  # Install TensorFlow, for Python 3.6 with GPU support
   pip install --ignore-installed --upgrade \
-  https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow_gpu-1.1.0-cp36-cp36m-linux_x86_64.whl
+  https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow_gpu-1.3.0-cp36-cp36m-linux_x86_64.whl
   ```
 4. Some additional python packages you may or may not already have: `cython`, `easydict`, `matplotlib` `scipy`, `Pillow`, `pyyaml`, `tqdm`. These should all be pip installable within your Anaconda environment (pip install [package]):
 
@@ -103,7 +103,7 @@ In order to train (and then test) on your own data:
 
 #### Organize your data into the following format:
   ```Shell
-  |--tf-Faster-RCNN_ROOT
+  |--tf-FRC_ROOT
     |--Data/
       |--[YOUR_DATASET]/
         |--Annotations/
@@ -120,7 +120,7 @@ In order to train (and then test) on your own data:
 Step 1 of the [cluttered MNIST demo](#simple-demo) automatically creates this data and organizes it accordingly, so run the `MNIST.py` script for an example file structure.
 
 #### *Optional: Pre-trained convolutional feature extractor weights*
-If you want to use pre-trained weights for the convolutional feature extractor (highly recommended), you have to download those [here](https://github.com/tensorflow/models/tree/master/slim#Pretrained). Currently, we have ResNet 50 V1 available; to use it, download the appropriate checkpoint file first.
+If you want to use pre-trained weights for the convolutional feature extractor (highly recommended), you have to download those [here](https://github.com/tensorflow/models/tree/master/research/slim#Pretrained). Currently, we have ResNet 50 V1 available; to use it, download the appropriate checkpoint file first.
 
 #### Configure the model
 The network architecture and model parameters depend on the kind of data you are trying to process. Most of these are adjustable from the config file. 
