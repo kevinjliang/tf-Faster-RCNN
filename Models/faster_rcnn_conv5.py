@@ -101,14 +101,15 @@ class FasterRcnnConv5(Model):
     
     def _optimizer(self):
         """ Define losses and initialize optimizer """
-        # Losses (come from TRAIN networks)
-        self.rpn_cls_loss = self.rpn_net['TRAIN'].get_rpn_cls_loss()
-        self.rpn_bbox_loss = self.rpn_net['TRAIN'].get_rpn_bbox_loss()
-        self.fast_rcnn_cls_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_cls_loss()
-        self.fast_rcnn_bbox_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_bbox_loss() * cfg.TRAIN.BBOX_REFINE
-
-        # Total Loss
-        self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss + self.fast_rcnn_bbox_loss)
+        with tf.variable_scope("losses"):
+            # Losses (come from TRAIN networks)
+            self.rpn_cls_loss = self.rpn_net['TRAIN'].get_rpn_cls_loss()
+            self.rpn_bbox_loss = self.rpn_net['TRAIN'].get_rpn_bbox_loss()
+            self.fast_rcnn_cls_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_cls_loss()
+            self.fast_rcnn_bbox_loss = self.fast_rcnn_net['TRAIN'].get_fast_rcnn_bbox_loss() * cfg.TRAIN.BBOX_REFINE
+    
+            # Total Loss
+            self.cost = tf.reduce_sum(self.rpn_cls_loss + self.rpn_bbox_loss + self.fast_rcnn_cls_loss + self.fast_rcnn_bbox_loss)
 
         # Optimizer arguments
         decay_steps = cfg.TRAIN.LEARNING_RATE_DECAY_RATE*len(self.names['TRAIN'])         # Number of Epochs x images/epoch

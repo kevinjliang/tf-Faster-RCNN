@@ -147,20 +147,21 @@ class roi_proposal:
             assert self.gt_boxes is None, \
                 'Evaluation mode should not have ground truth boxes (or else what are you detecting for?)'
 
-        # Convert scores to probabilities
-        self.rpn_cls_prob = rpn_softmax(self.rpn_cls_score)
-
-        # Determine best proposals
-        key = 'TRAIN' if self.eval_mode is False else 'TEST'
-        self.blobs = proposal_layer(rpn_bbox_cls_prob=self.rpn_cls_prob, rpn_bbox_pred=self.rpn_bbox_pred,
-                                    im_dims=self.im_dims, cfg_key=key, _feat_stride=self.rpn_net._feat_stride,
-                                    anchor_scales=self.anchor_scales)
-
-        if self.eval_mode is False:
-            # Calculate targets for proposals
-            self.rois, self.labels, self.bbox_targets, self.bbox_inside_weights, self.bbox_outside_weights = \
-                proposal_target_layer(rpn_rois=self.blobs, gt_boxes=self.gt_boxes,
-                                      _num_classes=self.num_classes)
+        with tf.variable_scope('roi_proposal'):
+            # Convert scores to probabilities
+            self.rpn_cls_prob = rpn_softmax(self.rpn_cls_score)
+    
+            # Determine best proposals
+            key = 'TRAIN' if self.eval_mode is False else 'TEST'
+            self.blobs = proposal_layer(rpn_bbox_cls_prob=self.rpn_cls_prob, rpn_bbox_pred=self.rpn_bbox_pred,
+                                        im_dims=self.im_dims, cfg_key=key, _feat_stride=self.rpn_net._feat_stride,
+                                        anchor_scales=self.anchor_scales)
+    
+            if self.eval_mode is False:
+                # Calculate targets for proposals
+                self.rois, self.labels, self.bbox_targets, self.bbox_inside_weights, self.bbox_outside_weights = \
+                    proposal_target_layer(rpn_rois=self.blobs, gt_boxes=self.gt_boxes,
+                                          _num_classes=self.num_classes)
 
     def get_rois(self):
         return self.rois if self.eval_mode is False else self.blobs
